@@ -99,14 +99,17 @@ def list(source: str, manifest_path: str | None, chrome_profile: str | None, onl
 @cli.command()
 @click.argument("url")
 @click.option("--timeout", default=30.0, help="HTTP request timeout in seconds [default: 30.0]")
-def fetch(url: str, timeout: float):
-    """Fetch a single URL via httpx+readability, output clean Markdown to stdout.
+@click.option("--renderer", default="auto", type=click.Choice(["auto", "direct", "jina", "playwright"]),
+              help="Fetch strategy: 'auto' tries direct→jina→playwright; or force one [default: auto]")
+def fetch(url: str, timeout: float, renderer: str):
+    """Fetch a single URL and output clean Markdown to stdout.
 
-    Strips navigation, ads, footers. Keeps article body only.
-    Exit code 1 on HTTP error or connection failure (error message to stderr).
+    Auto mode: tries httpx+readability first, falls back to Jina Reader API
+    for JS-rendered pages, then Playwright if installed.
+    Exit code 1 on all tiers failed (error message to stderr).
     """
     try:
-        markdown = fetch_url(url, timeout=timeout)
+        markdown = fetch_url(url, timeout=timeout, renderer=renderer)
     except FetchError as e:
         raise click.ClickException(str(e))
     click.echo(markdown)

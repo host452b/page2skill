@@ -112,13 +112,13 @@ class TestFetchCommand:
             url="https://example.com/article",
             html="<html><body><article><h1>Title</h1><p>Content here.</p></article></body></html>",
         )
-        result = runner.invoke(cli, ["fetch", "https://example.com/article"])
+        result = runner.invoke(cli, ["fetch", "--renderer", "direct", "https://example.com/article"])
         assert result.exit_code == 0
         assert "Content here" in result.output
 
     def test_fetch_error_shows_message(self, runner, httpx_mock):
         httpx_mock.add_response(url="https://example.com/missing", status_code=404)
-        result = runner.invoke(cli, ["fetch", "https://example.com/missing"])
+        result = runner.invoke(cli, ["fetch", "--renderer", "direct", "https://example.com/missing"])
         assert result.exit_code != 0
         assert "404" in result.output
 
@@ -309,7 +309,7 @@ class TestEndToEnd:
             url="https://example.com/article",
             html="<html><body><article><h1>Test</h1><p>Great content.</p></article></body></html>",
         )
-        result = runner.invoke(cli, ["fetch", "https://example.com/article"])
+        result = runner.invoke(cli, ["fetch", "--renderer", "direct", "https://example.com/article"])
         assert result.exit_code == 0
 
         # Step 3: write-obsidian
