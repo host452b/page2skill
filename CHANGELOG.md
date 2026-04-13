@@ -1,6 +1,45 @@
 # CHANGELOG
 
-## [Unreleased] — 2026-04-13 设计阶段
+## [0.1.0] — 2026-04-13
+
+### 新增功能
+
+- **7 个 CLI 命令完整实现：** `list`, `fetch`, `write-obsidian`, `write-skill`, `status`, `mark-done`, `mark-failed`
+- **`b2k` CLI 缩写别名：** `b2k` 等价于 `bookmark2skill`，方便日常使用
+- **三层抓取策略（auto 模式）：** httpx+readability → Jina Reader API (r.jina.ai) → Playwright，自动降级处理 JS 渲染页面
+- **`--renderer` 参数：** `auto`/`direct`/`jina`/`playwright` 四种模式可选
+- **`--exclude-folder` / `--include-folder`：** `list` 命令支持按文件夹过滤书签，可重复使用，substring 匹配
+- **`summary` 必填字段：** AI agent 蒸馏时必须生成 2-4 句摘要，渲染到 Obsidian 笔记"摘要"章节和 Skill 文件"Summary"章节
+- **双输出渲染：** Obsidian 笔记（六维解构 + 摘要）和 Claude Code Skill（frontmatter 重 + body 轻）
+- **Hybrid 模式：** `--data` 使用内置模板渲染，`--raw` 直接写入原始 Markdown
+- **Manifest 增量跟踪：** 每个 URL 一条记录，status: pending → done / failed
+- **分类存储（Triage）：** Skill 文件按 `taxonomy.toml` 分类存储到子目录
+- **分层配置：** `config.toml` → 环境变量 → CLI flags，三层覆盖
+- **AI agent 友好的 `--help`：** 每个命令精准描述 side effects、输出格式、exit codes
+- **`tojson` UTF-8 保留中文：** 模板输出不转义中文字符
+
+### 安全修复
+
+- **路径穿越防护：** `--folder` 和 `--category` 参数通过 `_safe_subpath()` 验证，拒绝 `../` 逃逸
+- **YAML 注入防护：** 所有用户数据模板变量使用 `tojson` filter 转义
+- **SSRF 防护：** `_validate_url()` 拒绝非 http/https scheme
+- **空 slug 防护：** `_slugify()` 对纯特殊字符输入返回 `"untitled"`
+- **`.gitignore` 完善：** 排除 `manifest.json`（含浏览历史）、`.pytest_cache/`、`.claude/`
+
+### 文档
+
+- **README.md（中文）：** 安装、配置、工作流、命令一览、输出格式、分类体系
+- **CLAUDE.md：** AI agent 进入项目目录的快速入口
+- **agent-guide.md：** 完整工作流编排指南、JSON Schema、蒸馏六维度 + 摘要指引、Skill 消费最佳实践、批量处理策略、错误恢复
+- **defaults/config.toml + taxonomy.toml：** 默认配置模板
+
+### 测试
+
+- **70 个测试**覆盖全部模块：config, schema, manifest, chrome_json parser, html_export parser, fetcher (direct + jina + auto), obsidian renderer, skill renderer, 7 个 CLI 命令, end-to-end 集成测试
+
+---
+
+## [设计阶段] — 2026-04-13
 
 ### 项目定位与调性
 
@@ -42,15 +81,15 @@
 
 **为什么：** Chrome JSON 是最直接的方式（无需手动导出），但 HTML 导入支持跨浏览器、跨机器场景。两者都支持，覆盖所有情况。
 
-#### 5. 分层抓取策略
+#### 5. 三层抓取策略
 
-**决策：** 先用 httpx + readability-lxml（轻量快速），失败时回退到 Playwright（完整浏览器渲染）。
+**决策：** Tier 1 httpx + readability-lxml（轻量快速）→ Tier 2 Jina Reader API r.jina.ai（远程浏览器渲染）→ Tier 3 Playwright（本地浏览器）。
 
-**为什么：** 80% 的文章是静态内容，不需要浏览器渲染。Playwright 是重型依赖，只在必要时启用。快的先来，重的兜底。
+**为什么：** 80% 的文章是静态内容，不需要浏览器渲染。JS 渲染页面通过 Jina 零本地依赖解决。Playwright 只作为最后兜底。每层自动降级，`--renderer` 可强制指定。
 
 #### 6. Schema 灵活性：最少必填，其余可空
 
-**决策：** 只有 `url`、`title`、`date_processed` 是必填。所有其他字段允许为 null、空数组或省略。
+**决策：** `url`、`title`、`summary`、`date_processed` 是必填。所有其他字段允许为 null、空数组或省略。
 
 **为什么：** 真实数据是混乱的。不是每篇文章都有明确的反对声音、清晰的品味信号或单一作者。强制填值会产生低质量数据。模板优雅地跳过空字段，而不是渲染空白占位符。
 
@@ -60,11 +99,11 @@
 
 **为什么：** 扁平目录在规模增长后对 AI agent 不友好。分类目录让 agent 能快速缩小搜索范围，精准复用相关经验。taxonomy 是指导而非约束——知识库会有机生长出新分类。
 
-#### 8. "解构保存"而非"总结"
+#### 8. "摘要 + 解构保存"双层结构
 
-**决策：** 蒸馏层不做摘要。做六维解构：逻辑推导链、精彩原文（带为什么精彩的标注）、叙事手法分析、具体案例与数据、反对声音与局限性、容易忽略的细节。
+**决策：** 每篇内容必须生成 2-4 句摘要（`summary` 必填），同时做六维解构：逻辑推导链、精彩原文（带为什么精彩的标注）、叙事手法分析、具体案例与数据、反对声音与局限性、容易忽略的细节。
 
-**为什么：** 总结会把文章压成一坨无味的要点。解构保留了每个零件的原始质感——未来你需要的可能不是"核心观点"，而是文章里顺口提到的一个配置参数、一个边缘案例、甚至是评论区某个反对意见。你今天不知道明天需要什么。
+**为什么：** 摘要是快速入口——扫描知识库时一眼看出这篇讲什么。解构是深度存储——保留每个零件的原始质感。两者互补：摘要用于检索和筛选，解构用于深入引用。
 
 #### 9. taste_signals 的意义
 
