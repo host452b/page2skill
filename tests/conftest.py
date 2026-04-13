@@ -1,6 +1,5 @@
 # tests/conftest.py
 import json
-import pathlib
 import pytest
 
 
