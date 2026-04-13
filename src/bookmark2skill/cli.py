@@ -131,25 +131,27 @@ def list(source: str, manifest_path: str | None, chrome_dir: str | None, only_ne
 @click.option("--renderer", default="auto", type=click.Choice(["auto", "direct", "jina", "playwright"]),
               help="Fetch strategy: 'auto' tries direct→jina→playwright; or force one [default: auto]")
 def fetch(url: str, timeout: float, renderer: str):
-    """Fetch a single URL and output clean Markdown to stdout.
+    """Fetch a URL or local file and output clean Markdown to stdout.
 
     \b
-    Tiered fetch strategy (auto mode):
+    For URLs — tiered fetch strategy (auto mode):
       Tier 1: httpx + readability-lxml    Fast, works for static pages (~80% of articles)
       Tier 2: Jina Reader API r.jina.ai   Remote browser rendering for JS-heavy pages
       Tier 3: Playwright (if installed)    Local headless Chrome, last resort
     \b
-    Auto mode triggers fallback when content is < 200 chars (likely JS shell).
-    Force a specific renderer with --renderer direct|jina|playwright.
+    For local files — auto-detected by path/extension, converted via markitdown:
+      Supports: PDF, Word, PowerPoint, Excel, images, audio, HTML, CSV, JSON, XML, EPUB
+      Requires: pip install 'markitdown[all]' (or specific extras like 'markitdown[pdf]')
     \b
     Exit codes:
       0  Success — Markdown written to stdout
-      1  All tiers failed — error message to stderr
+      1  Failed — error message to stderr
     \b
     Examples:
       b2k fetch https://example.com/article
       b2k fetch https://example.com/spa --renderer jina
-      b2k fetch https://example.com/article > /tmp/raw.md
+      b2k fetch ~/Downloads/report.pdf
+      b2k fetch ~/Desktop/slides.pptx > /tmp/slides.md
     """
     try:
         markdown = fetch_url(url, timeout=timeout, renderer=renderer)

@@ -38,6 +38,8 @@ Issues = "https://github.com/host452b/bookmark2skill/issues"
 
 [project.optional-dependencies]
 browser = ["playwright>=1.40"]
+docs = ["markitdown[all]>=0.1.5"]
+pdf = ["markitdown[pdf]>=0.1.5"]
 dev = ["pytest>=8.0", "pytest-httpx>=0.30"]
 
 [project.scripts]

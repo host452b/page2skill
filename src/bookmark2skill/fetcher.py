@@ -14,6 +14,11 @@ try:
 except ImportError:
     sync_playwright = None
 
+try:
+    from markitdown import MarkItDown as _MarkItDown
+except ImportError:
+    _MarkItDown = None
+
 
 class FetchError(Exception):
     """Raised when fetching a URL fails."""
@@ -99,15 +104,59 @@ def _fetch_playwright(url: str, *, timeout: float = 30.0) -> str:
     return _html_to_markdown(html)
 
 
+_FILE_EXTENSIONS = {
+    ".pdf", ".docx", ".doc", ".pptx", ".ppt", ".xlsx", ".xls",
+    ".csv", ".json", ".xml", ".epub", ".html", ".htm",
+    ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff",
+    ".mp3", ".wav",
+}
+
+
+def fetch_file(path: str) -> str:
+    """Convert a local file to Markdown using markitdown.
+
+    Supports: PDF, Word, PowerPoint, Excel, images, audio, HTML, CSV, JSON, XML, EPUB.
+    Requires: pip install 'markitdown[all]' or specific extras like 'markitdown[pdf]'.
+    """
+    import pathlib
+    p = pathlib.Path(path)
+    if not p.is_file():
+        raise FetchError(f"File not found: {path}")
+    if _MarkItDown is None:
+        raise FetchError(
+            "markitdown not installed. Install with: pip install 'markitdown[all]'"
+        )
+    try:
+        md = _MarkItDown(enable_plugins=False)
+        result = md.convert(str(p))
+        return result.text_content.strip()
+    except Exception as e:
+        raise FetchError(f"markitdown conversion failed for {path}: {e}") from e
+
+
+def _is_local_file(source: str) -> bool:
+    """Detect if source is a local file path (not a URL)."""
+    import pathlib
+    if source.startswith(("http://", "https://")):
+        return False
+    p = pathlib.Path(source)
+    return p.suffix.lower() in _FILE_EXTENSIONS or p.is_file()
+
+
 def fetch_url(url: str, *, timeout: float = 30.0, renderer: str = "auto") -> str:
-    """Fetch a URL and return its content as clean markdown.
+    """Fetch a URL or local file and return its content as clean markdown.
 
     Renderer modes:
       'auto'       — Tier 1 (direct) → Tier 2 (jina) → Tier 3 (playwright)
       'direct'     — httpx + readability only
       'jina'       — Jina Reader API only
       'playwright' — Local Playwright browser only
+    For local files: auto-detects by path/extension, uses markitdown.
     """
+    # Local file detection
+    if _is_local_file(url):
+        return fetch_file(url)
+
     _validate_url(url)
 
     if renderer == "direct":
