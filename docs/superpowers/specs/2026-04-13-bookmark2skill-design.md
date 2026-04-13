@@ -34,7 +34,7 @@ AI agent 编排工作流：`list → fetch → (agent 蒸馏) → write-obsidian
 
 ## 结构化 JSON Schema
 
-**必填：** `url`, `title`, `date_processed`
+**必填：** `url`, `title`, `summary`, `date_processed`
 
 **可选字段（均可为 null/空数组/省略）：**
 

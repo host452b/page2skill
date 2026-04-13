@@ -106,7 +106,7 @@
 
 ### 结构化数据 Schema（AI agent 填充）
 
-**必填：** `url`, `title`, `date_processed`
+**必填：** `url`, `title`, `summary`, `date_processed`
 
 **可选（均可为 null/空数组/省略）：**
 - `original_title`, `author[]`, `date_published`, `language`, `category`

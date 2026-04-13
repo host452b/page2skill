@@ -9,14 +9,15 @@ A Python CLI tool that converts Chrome bookmarks into Obsidian notes (human-read
 Read `docs/agent-guide.md` for the full workflow and structured JSON schema.
 
 ```bash
-bookmark2skill list --source chrome --only-new   # discover new bookmarks
-bookmark2skill fetch <url>                        # scrape page → markdown
-bookmark2skill write-obsidian --url <url> --data distilled.json --vault-path /path
-bookmark2skill write-skill --url <url> --data distilled.json --category eng/sys --skill-dir /path
-bookmark2skill mark-done <url> --obsidian-path <p> --skill-path <p>
+b2k list --source chrome --only-new       # discover new bookmarks
+b2k fetch <url>                            # scrape page → markdown
+b2k write-obsidian --url <url> --data distilled.json --vault-path /path
+b2k write-skill --url <url> --data distilled.json --category eng/sys --skill-dir /path
+b2k mark-done <url> --obsidian-path <p> --skill-path <p>
 ```
 
-Run `bookmark2skill <command> --help` for precise parameter descriptions.
+`b2k` is the shorthand alias for `bookmark2skill`. Both work.
+Run `b2k <command> --help` for precise parameter descriptions.
 
 ## Development
 
