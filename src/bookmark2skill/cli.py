@@ -50,18 +50,21 @@ def _detect_source_type(source: str) -> str:
 @click.option("--manifest-path", default=None, help="Override manifest.json path [default: ~/.bookmark2skill/manifest.json]")
 @click.option("--chrome-profile", default=None, help="Override Chrome profile directory for --source=chrome")
 @click.option("--only-new", is_flag=True, help="Output only URLs not yet in manifest (skip already-registered)")
-def list(source: str, manifest_path: str | None, chrome_profile: str | None, only_new: bool):
+@click.option("--exclude-folder", multiple=True, help="Exclude bookmarks whose folder path contains this string (repeatable)")
+@click.option("--include-folder", multiple=True, help="Only include bookmarks whose folder path contains this string (repeatable)")
+def list(source: str, manifest_path: str | None, chrome_profile: str | None, only_new: bool, exclude_folder: tuple[str, ...], include_folder: tuple[str, ...]):
     """Parse bookmark source into JSON array. Registers new URLs as 'pending' in manifest.
 
     Output: JSON array of {url, title, folder, date_added} to stdout.
     Side effect: new URLs are added to manifest with status 'pending'.
+    Filtering: --exclude-folder and --include-folder apply substring match on folder path.
+    Both are optional and repeatable. When both are set, exclude is applied after include.
     """
     cfg = load_config(overrides={
         "manifest_path": manifest_path,
         "chrome_profile": chrome_profile,
     })
     manifest = Manifest(cfg["manifest_path"])
-    existing_urls = manifest.all_urls()
 
     source_type = _detect_source_type(source)
     if source_type == "chrome":
@@ -74,6 +77,12 @@ def list(source: str, manifest_path: str | None, chrome_profile: str | None, onl
         bookmarks = parse_chrome_json(source)
     else:
         bookmarks = parse_html_export(source)
+
+    # Apply folder filters
+    if include_folder:
+        bookmarks = [b for b in bookmarks if any(inc in b["folder"] for inc in include_folder)]
+    if exclude_folder:
+        bookmarks = [b for b in bookmarks if not any(exc in b["folder"] for exc in exclude_folder)]
 
     new_bookmarks = []
     for b in bookmarks:

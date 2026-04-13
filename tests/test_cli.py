@@ -63,6 +63,49 @@ class TestListCommand:
         assert len(data) == 0  # All already in manifest
 
 
+    def test_list_exclude_folder(self, runner, chrome_bookmarks_file, tmp_home):
+        manifest_path = str(tmp_home / ".bookmark2skill" / "manifest.json")
+        result = runner.invoke(cli, [
+            "list", "--source", str(chrome_bookmarks_file),
+            "--manifest-path", manifest_path,
+            "--exclude-folder", "Tech",
+        ])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        # "Nested Article" is in Tech folder, should be excluded
+        urls = [b["url"] for b in data]
+        assert "https://example.com/nested" not in urls
+        assert "https://example.com/article" in urls
+
+    def test_list_include_folder(self, runner, chrome_bookmarks_file, tmp_home):
+        manifest_path = str(tmp_home / ".bookmark2skill" / "manifest.json")
+        result = runner.invoke(cli, [
+            "list", "--source", str(chrome_bookmarks_file),
+            "--manifest-path", manifest_path,
+            "--include-folder", "Tech",
+        ])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        # Only "Nested Article" is in Tech folder
+        assert len(data) == 1
+        assert data[0]["url"] == "https://example.com/nested"
+
+    def test_list_exclude_and_include_combined(self, runner, chrome_bookmarks_file, tmp_home):
+        manifest_path = str(tmp_home / ".bookmark2skill" / "manifest.json")
+        # Include Bookmarks bar (both items), then exclude Tech (removes nested)
+        result = runner.invoke(cli, [
+            "list", "--source", str(chrome_bookmarks_file),
+            "--manifest-path", manifest_path,
+            "--include-folder", "Bookmarks bar",
+            "--exclude-folder", "Tech",
+        ])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        urls = [b["url"] for b in data]
+        assert "https://example.com/article" in urls
+        assert "https://example.com/nested" not in urls
+
+
 class TestFetchCommand:
     def test_fetch_outputs_markdown(self, runner, httpx_mock):
         httpx_mock.add_response(
