@@ -241,3 +241,70 @@ class TestMarkCommands:
             "--manifest-path", manifest_path,
         ])
         assert result.exit_code != 0
+
+
+class TestEndToEnd:
+    def test_full_workflow(self, runner, tmp_path, chrome_bookmarks_file, sample_distilled_data, httpx_mock):
+        """Test the complete workflow: list → fetch → write-obsidian → write-skill → mark-done → status."""
+        vault = tmp_path / "vault"
+        vault.mkdir()
+        skill_dir = tmp_path / "skills"
+        skill_dir.mkdir()
+        manifest_path = str(tmp_path / "manifest.json")
+
+        # Step 1: list
+        result = runner.invoke(cli, [
+            "list", "--source", str(chrome_bookmarks_file),
+            "--manifest-path", manifest_path,
+        ])
+        assert result.exit_code == 0
+        bookmarks = json.loads(result.output)
+        assert len(bookmarks) == 2
+
+        # Step 2: fetch
+        httpx_mock.add_response(
+            url="https://example.com/article",
+            html="<html><body><article><h1>Test</h1><p>Great content.</p></article></body></html>",
+        )
+        result = runner.invoke(cli, ["fetch", "https://example.com/article"])
+        assert result.exit_code == 0
+
+        # Step 3: write-obsidian
+        data_file = tmp_path / "distilled.json"
+        data_file.write_text(json.dumps(sample_distilled_data), encoding="utf-8")
+        result = runner.invoke(cli, [
+            "write-obsidian",
+            "--url", "https://example.com/article",
+            "--data", str(data_file),
+            "--vault-path", str(vault),
+        ])
+        assert result.exit_code == 0
+        obsidian_path = json.loads(result.output)["path"]
+
+        # Step 4: write-skill
+        result = runner.invoke(cli, [
+            "write-skill",
+            "--url", "https://example.com/article",
+            "--data", str(data_file),
+            "--category", "engineering/system-design",
+            "--skill-dir", str(skill_dir),
+        ])
+        assert result.exit_code == 0
+        skill_path = json.loads(result.output)["path"]
+
+        # Step 5: mark-done
+        result = runner.invoke(cli, [
+            "mark-done", "https://example.com/article",
+            "--manifest-path", manifest_path,
+            "--obsidian-path", obsidian_path,
+            "--skill-path", skill_path,
+        ])
+        assert result.exit_code == 0
+
+        # Step 6: status
+        result = runner.invoke(cli, ["status", "--manifest-path", manifest_path])
+        assert result.exit_code == 0
+        status = json.loads(result.output)
+        assert status["done"] == 1
+        assert status["pending"] == 1
+        assert status["total"] == 2
