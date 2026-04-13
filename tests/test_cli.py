@@ -286,6 +286,90 @@ class TestMarkCommands:
         assert result.exit_code != 0
 
 
+class TestSearchCommand:
+    def test_search_finds_matching_skill(self, runner, tmp_path, sample_distilled_data):
+        skill_dir = tmp_path / "skills"
+        skill_dir.mkdir()
+        data_file = tmp_path / "data.json"
+        data_file.write_text(json.dumps(sample_distilled_data), encoding="utf-8")
+        runner.invoke(cli, [
+            "write-skill",
+            "--url", "https://example.com/article",
+            "--data", str(data_file),
+            "--category", "engineering/system-design",
+            "--skill-dir", str(skill_dir),
+        ])
+        result = runner.invoke(cli, [
+            "search", "simplicity", "--skill-dir", str(skill_dir),
+        ])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert len(data) >= 1
+        assert data[0]["score"] > 0
+        assert "engineering/system-design" in data[0]["category"]
+
+    def test_search_no_results(self, runner, tmp_path, sample_distilled_data):
+        skill_dir = tmp_path / "skills"
+        skill_dir.mkdir()
+        data_file = tmp_path / "data.json"
+        data_file.write_text(json.dumps(sample_distilled_data), encoding="utf-8")
+        runner.invoke(cli, [
+            "write-skill",
+            "--url", "https://example.com/article",
+            "--data", str(data_file),
+            "--category", "engineering/system-design",
+            "--skill-dir", str(skill_dir),
+        ])
+        result = runner.invoke(cli, [
+            "search", "quantum-physics-xyz", "--skill-dir", str(skill_dir),
+        ])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert len(data) == 0
+
+    def test_search_ranks_by_relevance(self, runner, tmp_path, sample_distilled_data):
+        skill_dir = tmp_path / "skills"
+        skill_dir.mkdir()
+        # Write skill with "system-design" in tags
+        data_file = tmp_path / "data.json"
+        data_file.write_text(json.dumps(sample_distilled_data), encoding="utf-8")
+        runner.invoke(cli, [
+            "write-skill",
+            "--url", "https://example.com/article",
+            "--data", str(data_file),
+            "--category", "engineering/system-design",
+            "--skill-dir", str(skill_dir),
+        ])
+        result = runner.invoke(cli, [
+            "search", "system-design", "--skill-dir", str(skill_dir),
+        ])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert len(data) >= 1
+        # Should match on tags (weight 3) at minimum
+        assert data[0]["score"] >= 3
+
+
+class TestManifestBackup:
+    def test_manifest_creates_backup_on_save(self, runner, chrome_bookmarks_file, tmp_home):
+        manifest_path = tmp_home / ".bookmark2skill" / "manifest.json"
+        bak_path = tmp_home / ".bookmark2skill" / "manifest.json.bak"
+        runner.invoke(cli, [
+            "list", "--source", str(chrome_bookmarks_file),
+            "--manifest-path", str(manifest_path),
+        ])
+        # First save creates manifest but no .bak (no pre-existing file to back up from _load)
+        # Second operation should create .bak
+        runner.invoke(cli, [
+            "mark-done", "https://example.com/article",
+            "--manifest-path", str(manifest_path),
+        ])
+        assert bak_path.is_file()
+        # .bak should be valid JSON
+        bak_data = json.loads(bak_path.read_text())
+        assert "bookmarks" in bak_data
+
+
 class TestEndToEnd:
     def test_full_workflow(self, runner, tmp_path, chrome_bookmarks_file, sample_distilled_data, httpx_mock):
         """Test the complete workflow: list → fetch → write-obsidian → write-skill → mark-done → status."""

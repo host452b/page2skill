@@ -25,6 +25,10 @@ class Manifest:
         if data is None:
             data = self._data
         self._path.parent.mkdir(parents=True, exist_ok=True)
+        # Auto-backup before overwrite
+        if self._path.is_file():
+            bak = self._path.with_suffix(".json.bak")
+            bak.write_bytes(self._path.read_bytes())
         with open(self._path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 

@@ -251,3 +251,89 @@ def mark_failed(url: str, manifest_path: str | None, reason: str):
         raise click.ClickException(f"URL not found in manifest: {url}")
     manifest.mark_failed(url, reason=reason)
     click.echo(json.dumps({"status": "failed", "url": url}, ensure_ascii=False))
+
+
+@cli.command()
+@click.argument("query")
+@click.option("--skill-dir", required=True, help="Base skill output directory to search")
+@click.option("--limit", "max_results", default=10, help="Max results to return [default: 10]")
+def search(query: str, skill_dir: str, max_results: int):
+    """Search skill files by keyword. Matches against name, description, tags, key_claims, summary, and body.
+
+    Output: JSON array of {path, name, score, matched_fields} to stdout, ranked by relevance.
+    """
+    import os
+
+    query_lower = query.lower()
+    results = []
+    base = pathlib.Path(skill_dir)
+
+    if not base.is_dir():
+        raise click.ClickException(f"Skill directory not found: {skill_dir}")
+
+    for root, _dirs, files in os.walk(base):
+        for fname in files:
+            if not fname.endswith(".md"):
+                continue
+            fpath = pathlib.Path(root) / fname
+            try:
+                content = fpath.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+
+            # Parse frontmatter and body
+            score = 0
+            matched = []
+
+            # Split frontmatter from body
+            parts = content.split("---", 2)
+            frontmatter = parts[1] if len(parts) >= 3 else ""
+            body = parts[2] if len(parts) >= 3 else content
+
+            # Weighted field matching on frontmatter lines
+            field_weights = {
+                "name:": 5,
+                "description:": 4,
+                "tags:": 3,
+                "key_claims:": 3,
+                "situation:": 2,
+                "category:": 2,
+            }
+            for line in frontmatter.split("\n"):
+                line_lower = line.lower()
+                if query_lower in line_lower:
+                    for field, weight in field_weights.items():
+                        if field in line_lower:
+                            score += weight
+                            matched.append(field.rstrip(":"))
+                            break
+                    else:
+                        score += 1
+                        if "frontmatter" not in matched:
+                            matched.append("frontmatter")
+
+            # Body match (summary, insights, examples, etc.)
+            if query_lower in body.lower():
+                score += 1
+                matched.append("body")
+
+            if score > 0:
+                # Extract name from frontmatter
+                name = ""
+                for line in frontmatter.split("\n"):
+                    if line.strip().startswith("name:"):
+                        name = line.split(":", 1)[1].strip().strip('"')
+                        break
+
+                category = str(fpath.parent.relative_to(base))
+                results.append({
+                    "path": str(fpath),
+                    "name": name,
+                    "category": category,
+                    "score": score,
+                    "matched_fields": matched,
+                })
+
+    results.sort(key=lambda r: r["score"], reverse=True)
+    results = results[:max_results]
+    click.echo(json.dumps(results, ensure_ascii=False, indent=2))
