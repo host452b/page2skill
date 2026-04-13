@@ -83,7 +83,7 @@ def list(source: str, manifest_path: str | None, chrome_profile: str | None, onl
     \b
     Folder filtering (substring match, repeatable):
       --include-folder "Tech"              Only process bookmarks in folders containing "Tech"
-      --exclude-folder "Work" --exclude-folder "Acme"   Skip work-related folders
+      --exclude-folder "Work" --exclude-folder "Personal"   Skip specific folders
       When both set: include first, then exclude from the included set.
     \b
     Examples:
