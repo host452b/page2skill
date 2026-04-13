@@ -1,166 +1,214 @@
 ---
 name: distill
-description: Distill a fetched bookmark into structured Obsidian note + Claude Code skill. Use when processing bookmarks with b2k.
+description: Distill fetched bookmarks into structured Obsidian notes + Claude Code skills. Use when processing bookmarks with b2k. Invoke with /distill or when user says "蒸馏", "distill", "处理书签".
 ---
 
 # Bookmark Distillation Skill
 
-You are distilling a web page into a structured knowledge entry. This is NOT summarization — it is deconstruction that preserves the original texture, opinions, and value.
+You are distilling web pages into structured knowledge entries. This is NOT summarization — it is deconstruction that preserves the original texture, opinions, conclusions, and value.
 
 ## When to Use
 
-When orchestrating the `b2k` (bookmark2skill) pipeline:
-```
-b2k fetch <url> → (YOU distill here) → b2k write-obsidian + b2k write-skill
-```
+When orchestrating the `b2k` (bookmark2skill) pipeline. This skill is the "brain" part — b2k handles the "hands" (fetch, write, track).
 
 ## Two-Phase Pipeline
 
 ```
-Phase 1 (batch): b2k fetch <url> --save-raw ./b2k-raw    ← 批量抓取，保存原始内容
-Phase 2 (AI):    读 b2k-raw/*.md → 蒸馏 → b2k write       ← 逐篇 AI 蒸馏
+Phase 1 (batch, can automate):
+  b2k list --source chrome --include-folder "X" | get URLs
+  b2k fetch <url> --save-raw ./b2k-raw              # batch fetch, save raw markdown
+
+Phase 2 (AI, must be per-page):
+  Read b2k-raw/*.md → Distill → b2k write-obsidian + write-skill → b2k mark-done
 ```
 
-Phase 1 可以自动化批量跑（保底防链接腐烂）。Phase 2 必须由 AI 逐篇完成。
+Phase 1 is the safety net (raw content survives link rot). Phase 2 is where YOU add value.
 
-## Process
+## Execution Flow
 
-### Step 1: Fetch the content (Phase 1)
+When the user asks to distill bookmarks, follow this exact flow:
+
+### 1. Identify what to process
 
 ```bash
-# 单个 URL — 保存原始内容到 b2k-raw/
-b2k fetch <url> --save-raw ./b2k-raw
+# Option A: Specific folder
+b2k list --source chrome --include-folder "有意思的" --only-new
 
-# 或直接读取已保存的原始内容
-cat ./b2k-raw/<slug>.md
+# Option B: Check pending
+b2k status
+
+# Option C: Already have raw files
+ls ./b2k-raw/*.md
 ```
 
-Read the full output. Do NOT skip or skim.
+### 2. Phase 1 — Batch fetch raw content
 
-### Step 2: Think about what you read
+For each URL, fetch and save raw:
 
-Before writing any JSON, answer these questions internally:
-- **What is the author's core argument or purpose?**
-- **What evidence or examples do they use?**
-- **What makes this worth bookmarking?** (not "what is it about" — why did the user save THIS specific page)
-- **What would I lose if this page disappeared?**
-- **When would I want to reference this in the future?**
+```bash
+b2k fetch <url> --save-raw ./b2k-raw
+```
 
-### Step 3: Generate the structured JSON
+If processing many URLs, do this in a loop first. Skip URLs that fail.
 
-Write to a temp file, then pass to `b2k write-obsidian` and `b2k write-skill`.
+### 3. Phase 2 — AI distillation (ONE AT A TIME)
 
-Required fields: `url`, `title`, `summary`, `date_processed`
+For each raw file:
 
-#### title
-Rewrite as the core claim or insight — NOT the original title.
+**A. Read the full content.**
+
+```bash
+cat ./b2k-raw/<file>.md
+```
+
+DO NOT skip or skim. Read it all.
+
+**B. Think before writing.** Answer internally:
+- What is the author's core argument?
+- What evidence or examples support it?
+- What makes this worth saving? What would be lost if the page disappeared?
+- What is the author's CONCLUSION? What do they want the reader to DO or BELIEVE?
+- When would I reference this in 6 months?
+
+**C. Generate the structured JSON:**
+
+```bash
+cat > /tmp/b2k-distilled.json << 'JSONEOF'
+{
+  "url": "<url>",
+  "title": "<rewritten title — core claim, NOT original title>",
+  "summary": "<2-4 sentences: core argument + evidence + why it matters>",
+  "date_processed": "<ISO8601>",
+  "original_title": "<original page title>",
+  "category": "<area/sub from taxonomy>",
+  "layers": {
+    "distillation": {
+      "logic_chain": ["A → B", "B → C", "Therefore D"],
+      "brilliant_quotes": [{"text": "exact quote", "why": "why it's brilliant"}],
+      "narrative_craft": ["how the author writes, not what they write"],
+      "concrete_examples": ["the actual example with details, not 'the author gave an example'"],
+      "counterpoints": ["limitations acknowledged or blind spots"],
+      "overlooked_details": ["tool names, version numbers, config values, links mentioned in passing"]
+    },
+    "agent_metadata": {
+      "tags": ["tag1", "tag2"],
+      "content_type": "technical-article|opinion-essay|tool-repo|game-resource|reference",
+      "key_claims": ["assertive statement that can be agreed/disagreed with"],
+      "taste_signals": {
+        "aesthetic": ["style preferences this bookmark reveals"],
+        "intellectual": ["thinking patterns"],
+        "values": ["what matters"]
+      },
+      "reuse_contexts": [{"situation": "specific scenario", "how": "exactly how to use this"}],
+      "quality_score": {"depth": 1-5, "originality": 1-5, "practicality": 1-5, "writing": 1-5}
+    }
+  }
+}
+JSONEOF
+```
+
+**D. Write outputs:**
+
+```bash
+b2k write-obsidian --url <url> --data /tmp/b2k-distilled.json --vault-path ./b2k-vault
+b2k write-skill --url <url> --data /tmp/b2k-distilled.json --category <cat> --skill-dir ./b2k-skills
+b2k mark-done <url> --obsidian-path <path> --skill-path <path>
+```
+
+**E. Print progress:**
+```
+[3/20] ✅ thinking/insights — "Worse is Better: 实现简单性胜过接口完美性"
+```
+
+### 4. Report when done
+
+```
+蒸馏完成:
+  成功: 18/20
+  失败: 2 (HTTP 404)
+  分类: thinking/insights(7), engineering/ai(5), design/game(4), product/indie(2)
+```
+
+## Quality Standards
+
+### title
+Rewrite as the core claim — NOT the original title.
 - Bad: "An Introduction to System Design"
 - Good: "Worse is Better: 实现简单性胜过接口完美性的生存优势"
 
-#### summary (CRITICAL — this is the most important field)
-2-4 sentences. Must contain:
-1. The core argument or what this page IS
-2. The key evidence or method
-3. Why it matters or when it's useful
+### summary (THE most important field)
+2-4 sentences. MUST contain:
+1. The core argument or what this IS
+2. Key evidence or method
+3. Why it matters — the author's CONCLUSION
 
 - Bad: "这篇文章讲了系统设计的一些内容。"
-- Good: "Richard Gabriel 论证 worse-is-better 哲学——实现简单性比接口完美性更重要，因为它决定了可移植性和扩散速度。通过 Unix/C vs Lisp 的历史对比，说明 50% 正确 + 病毒式传播胜过 90% 正确但无法发布。软件工程史上最有影响力的设计哲学论述之一。"
+- Bad: "写这篇文章目的是之前在一篇文章中谈到..." (copying the first paragraph is NOT a summary)
+- Good: "Richard Gabriel 论证 worse-is-better 哲学——实现简单性比接口完美性更重要。通过 Unix/C vs Lisp 的对比，说明 50% 正确 + 病毒式传播胜过 90% 正确但无法发布。这是软件工程史上最有影响力的设计哲学论述之一。"
 
-#### category
-Choose from taxonomy or create new. Format: `area/sub` (e.g., `engineering/ai`, `thinking/insights`, `design/game`).
+### key_claims
+Assertive statements — things that can be AGREED or DISAGREED with:
+- Bad: "这篇文章讲了设计"
+- Bad: (copying a paragraph verbatim)
+- Good: "实现简单性比接口完美性更重要，因为它决定了可移植性和扩散速度"
+- Good: "限制程序员发展的主要因素是自我封闭的意识，而非外部环境"
 
-#### layers.distillation
+### brilliant_quotes
+Keep ORIGINAL words + annotate WHY:
+- The "why" must be specific — "很好" is not acceptable
+- If no quote is truly brilliant, leave empty
 
-**logic_chain** — Trace the author's reasoning as a chain:
-- Bad: `["介绍了一些概念", "给出了一些建议"]`
-- Good: `["实现简单 → 易于移植", "易于移植 → 快速扩散", "快速扩散 → 社区改进", "因此: worse is better 是更优的生存策略"]`
+### reuse_contexts
+Concrete and specific:
+- Bad: {"situation": "需要参考", "how": "看这篇文章"}
+- Good: {"situation": "讨论是否先发 MVP 还是追求完美", "how": "引用 worse-is-better: 50% 正确 + 传播胜过无法发布"}
 
-**brilliant_quotes** — Keep original words + annotate WHY brilliant:
-- Bad: `[{"text": "一句话", "why": "很好"}]`
-- Good: `[{"text": "It is slightly better to be simple than correct.", "why": "一句话概括 worse-is-better 核心取舍——直接挑战'正确性不可妥协'的信条"}]`
-
-If no quote is truly brilliant, leave empty. Do NOT force it.
-
-**narrative_craft** — HOW the author writes, not WHAT they write:
-- "用两个人的对话具象化抽象的设计哲学"
-- "先把观点描述为'显然是坏的'，然后翻转——先抑后扬"
-
-**concrete_examples** — Write out the ACTUAL example, not "the author gave an example":
-- Bad: `["作者举了一个操作系统的例子"]`
-- Good: `["PC loser-ing 问题: MIT 方案是系统回退并恢复 PC（正确但复杂），Unix 方案是返回错误码让用户重试（简单但复杂度推给用户）"]`
-
-**counterpoints** — What the author acknowledged as limitations, or what you see as blind spots.
-
-**overlooked_details** — Tool names, version numbers, config values, links mentioned in passing. These are the details you'll need in 6 months but won't remember.
-
-#### layers.agent_metadata
-
-**key_claims** — Assertive statements that can be AGREED or DISAGREED with:
-- Bad: `["这篇文章讲了设计"]`
-- Good: `["实现简单性比接口完美性更重要——因为它决定了软件的可移植性和扩散速度"]`
-
-**taste_signals** — What does bookmarking this reveal about the user's preferences:
-- `aesthetic`: writing/design style preferences (e.g., "极简主义", "对立结构叙事")
-- `intellectual`: thinking patterns (e.g., "第一性原理", "进化论思维")
-- `values`: what matters to them (e.g., "实用主义胜过理想主义", "开源优先")
-
-If unclear, leave arrays empty. Do NOT guess.
-
-**reuse_contexts** — Concrete scenarios where this should be referenced:
-- Bad: `[{"situation": "需要参考", "how": "看这篇文章"}]`
-- Good: `[{"situation": "讨论是否先发布 MVP 还是追求完美", "how": "引用 worse-is-better: 50% 正确 + 传播胜过 90% 正确无法发布"}]`
-
-**quality_score** — Be honest, not generous:
+### quality_score
+Be honest:
 - `depth`: 1=浅谈 2=概述 3=有深度 4=系统性 5=权威
 - `originality`: 1=常见观点 2=有角度 3=新颖 4=独特 5=开创性
 - `practicality`: 1=纯理论 2=有启发 3=可参考 4=可直接用 5=即拿即用
 - `writing`: 1=粗糙 2=能读 3=清晰 4=有风格 5=精彩
 
-### Step 4: Write outputs
+## Content Type Adaptation
 
-```bash
-# Save JSON
-cat > /tmp/b2k-distilled.json << 'EOF'
-{ ... your JSON ... }
-EOF
+### Articles / Essays (has depth)
+Use ALL distillation fields. Focus on logic_chain, key_claims, brilliant_quotes.
 
-# Write Obsidian note
-b2k write-obsidian --url <url> --data /tmp/b2k-distilled.json --vault-path ./b2k-vault
-
-# Write skill file
-b2k write-skill --url <url> --data /tmp/b2k-distilled.json --category <category> --skill-dir ./b2k-skills
-
-# Mark done
-b2k mark-done <url> --obsidian-path <path> --skill-path <path>
-```
-
-### Step 5: Verify
-
-Read the generated files. Check:
-- Does the summary answer "what, evidence, why it matters"?
-- Are the key_claims actually assertive (can be agreed/disagreed)?
-- Would you find this useful in 6 months with zero memory of the original?
-
-## What NOT to Do
-
-- Do NOT write "这篇文章讲了..." as a summary — that's meta-description, not distillation
-- Do NOT force-fill fields — empty is better than garbage
-- Do NOT copy the original title as the distilled title
-- Do NOT write generic reuse_contexts like "需要参考时"
-- Do NOT give everything quality_score 3/3/3/3 — differentiate
-- Do NOT skip reading the content — mechanical extraction produces empty shells
-
-## For Pages Without Depth
-
-Some bookmarks are tools, resources, or product pages — not articles. For these:
+### Tools / Repos / Products
 - summary: What it is + what it's useful for + what makes it unique
-- Skip: logic_chain, brilliant_quotes, narrative_craft, counterpoints
+- Skip: logic_chain, brilliant_quotes, narrative_craft
 - Focus: concrete_examples (what can you DO with it), reuse_contexts, overlooked_details
 
-## Batch Processing
+### Game Resources / Art / Visual
+- summary: What it is + art style + intended use
+- Skip: logic_chain, counterpoints
+- Focus: concrete_examples (what does it look like/contain), reuse_contexts
 
-When processing multiple bookmarks:
-1. Fetch all first, filter out unreachable
-2. Distill ONE at a time — read fully before writing
-3. After each: write + mark-done immediately
-4. Print progress: `[N/total] title → category`
+### Resource Collections / Portals
+- summary: What's collected + who it's for + what makes it better than alternatives
+- Skip: brilliant_quotes, narrative_craft
+- Focus: overlooked_details (specific resources listed), reuse_contexts
+
+## Anti-Patterns — NEVER DO THESE
+
+| Anti-pattern | Why it's wrong |
+|---|---|
+| Copy first paragraph as summary | That's extraction, not distillation |
+| Copy paragraph as key_claim | Claims must be assertive opinions, not descriptions |
+| All quality_scores 3/3/3/3 | Differentiate — a shallow tool page is NOT depth:3 |
+| Generic reuse_context "需要参考时" | Must be a specific scenario |
+| Empty taste_signals for articles | Articles always reveal aesthetic/intellectual signals |
+| Forcing brilliant_quotes on tool pages | Tools don't have quotes — leave empty |
+| Processing without reading | Mechanical extraction produces empty shells |
+
+## Session Workflow
+
+When starting a new distillation session:
+
+1. Check `b2k status` — see what's pending
+2. Pick a batch (10-20 pages per session recommended)
+3. Phase 1: batch fetch all URLs to b2k-raw/
+4. Phase 2: distill one at a time, mark-done after each
+5. Report at the end
+6. Next session picks up where this one left off (manifest tracks state)
