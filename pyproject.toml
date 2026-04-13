@@ -29,6 +29,7 @@ dependencies = [
     "jinja2>=3.1",
     "tomli>=2.0;python_version<'3.11'",
     "playwright>=1.40",
+    "markitdown[all]>=0.1.5",
 ]
 
 [project.urls]
