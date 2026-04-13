@@ -462,24 +462,6 @@ _SKIP_FOLDER_KEYWORDS = [
     "购物", "shopping", "stock",
 ]
 
-_WHITELIST_FOLDER_KEYWORDS = [
-    # Learning
-    "学习", "learning", "tutorial", "course", "正在学",
-    # Programming
-    "python", "rust", "c++", "java", "go", "cuda",
-    # AI
-    "ai", "llm", "ml", "model", "agent", "skill",
-    # Discovery
-    "有意思", "有趣", "interesting", "awesome", "令人惊叹",
-    # Knowledge
-    "思考", "thinking", "论文", "paper", "文献",
-    # Resources
-    "免费", "free", "open source", "开源",
-    # Projects
-    "project", "项目", "repo", "code",
-    # Design / creative
-    "design", "设计", "game", "游戏",
-]
 
 
 @cli.command()
@@ -556,22 +538,20 @@ def report(source: str, vault_path: str, skill_dir: str, include_folder: tuple[s
         url, title = b["url"], b["title"][:60]
         folder = b.get("folder", "")
         title_lower = b.get("title", "").lower()
+        folder_lower = folder.lower()
         is_skip_url = any(p in url.lower() for p in _SKIP_URL_PATTERNS)
-        is_skip_folder = any(kw in folder for kw in _SKIP_FOLDER_KEYWORDS)
-        is_skip_title = any(kw in title_lower for kw in _SKIP_TITLE_KEYWORDS)
-        is_whitelisted = any(kw in folder for kw in _WHITELIST_FOLDER_KEYWORDS)
+        is_skip_folder = any(kw.lower() in folder_lower for kw in _SKIP_FOLDER_KEYWORDS)
+        is_skip_title = any(kw.lower() in title_lower for kw in _SKIP_TITLE_KEYWORDS)
 
         if url in vault_urls and url in skill_urls:
             cat = skill_urls[url][0]
             done.append({"title": title, "category": cat})
         elif is_skip_url:
-            skipped.append({"title": title, "reason": "URL 匹配跳过规则"})
+            skipped.append({"title": title, "reason": "URL blacklist"})
         elif is_skip_folder:
-            skipped.append({"title": title, "reason": "文件夹匹配跳过规则"})
+            skipped.append({"title": title, "reason": "folder blacklist"})
         elif is_skip_title:
-            skipped.append({"title": title, "reason": "标题匹配跳过规则"})
-        elif not is_whitelisted:
-            skipped.append({"title": title, "reason": "不在白名单文件夹中"})
+            skipped.append({"title": title, "reason": "title blacklist"})
         else:
             pending.append({"title": title, "url": url})
 
