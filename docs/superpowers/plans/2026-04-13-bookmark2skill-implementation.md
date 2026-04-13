@@ -305,7 +305,7 @@ def html_bookmarks_file(tmp_path):
 
 - [ ] **Step 5: Install in dev mode and verify CLI works**
 
-Run: `cd . && pip install -e ".[dev]"`
+Run: `pip install -e ".[dev]"`
 
 Then: `bookmark2skill --version`
 
