@@ -436,48 +436,49 @@ def search(query: str, skill_dir: str, max_results: int):
 
 
 _SKIP_URL_PATTERNS = [
-    # Enterprise collaboration platforms
+    # Enterprise collaboration (any company)
     "atlassian.net", "confluence.", "jira.", "gitlab.", "github.com/enterprise",
     "service-now.com", "sharepoint.com", "workday.com", "slack.com/archives",
-    # E-commerce / purchase / registration pages
-    ".aliyun.com", "taobao.com", "jd.com", "tmall.com",
-    "amazon.com/dp", "amazon.com/gp",
-    # Auth-gated content
-    "coursera.org/programs",
+    # E-commerce / purchase pages
+    "taobao.com", "jd.com", "tmall.com", "amazon.com/dp", "amazon.com/gp",
+    # Cloud console / billing
+    "/console", "/billing", "/buy/",
 ]
 
 _SKIP_TITLE_KEYWORDS = [
-    # Portal / dashboard / login (not knowledge content)
-    "登录", "控制台", "dashboard", "login", "admin", "console",
-    "sign in", "sign up", "注册",
-    # Account / personal management
-    "我的订单", "my request", "account settings", "账户",
-    # Download / install pages
-    "安装指南", "install guide",
+    # Auth / portal (not knowledge content)
+    "登录", "login", "sign in", "sign up",
+    "dashboard", "控制台", "console", "admin",
+    # Account / personal
+    "my request", "我的订单", "account settings",
 ]
 
 _SKIP_FOLDER_KEYWORDS = [
-    # Portals / online tools (no knowledge value for distillation)
-    "在线工具", "ONLINE_TOOLS", "门户", "Portal",
-    # HR / onboarding / offboarding
-    "离职", "入职", "WELFARE", "ESPP",
+    # Portals / online tools
+    "在线工具", "online tool", "门户", "portal",
+    # HR / corporate
+    "入职", "离职", "onboarding", "offboarding", "welfare",
     # Shopping / finance
-    "购物", "STOCK",
-    # Work infra (generic keywords)
-    "在家办公",
+    "购物", "shopping", "stock",
 ]
 
 _WHITELIST_FOLDER_KEYWORDS = [
-    # Learning & knowledge
-    "正在学", "学习", "STACK", "C++", "python", "RUST", "CUDA", "pytorch",
-    # AI & creative
-    "CHAT AI", "AI 模型", "SKILLS", "GODOT",
-    # Interesting finds
-    "有意思", "有趣", "令人惊叹",
-    # Resources & references
-    "免费", "思考", "长期学习", "CODE_REPO", "论文", "文献",
+    # Learning
+    "学习", "learning", "tutorial", "course", "正在学",
+    # Programming
+    "python", "rust", "c++", "java", "go", "cuda",
+    # AI
+    "ai", "llm", "ml", "model", "agent", "skill",
+    # Discovery
+    "有意思", "有趣", "interesting", "awesome", "令人惊叹",
+    # Knowledge
+    "思考", "thinking", "论文", "paper", "文献",
+    # Resources
+    "免费", "free", "open source", "开源",
     # Projects
-    "MISC", "探针", "个人项目",
+    "project", "项目", "repo", "code",
+    # Design / creative
+    "design", "设计", "game", "游戏",
 ]
 
 
