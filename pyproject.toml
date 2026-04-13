@@ -21,6 +21,7 @@ dev = ["pytest>=8.0", "pytest-httpx>=0.30"]
 
 [project.scripts]
 bookmark2skill = "bookmark2skill.cli:cli"
+b2k = "bookmark2skill.cli:cli"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/bookmark2skill"]

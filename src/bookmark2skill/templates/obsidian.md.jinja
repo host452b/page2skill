@@ -1,19 +1,18 @@
 ---
 url: {{ url | tojson }}
-{%- if original_title %}
+{% if original_title -%}
 original_title: {{ original_title | tojson }}
-{%- endif %}
-{%- if author %}
+{% endif -%}
+{% if author -%}
 author: {{ author | tojson }}
-{%- endif %}
-{%- if date_published %}
+{% endif -%}
+{% if date_published -%}
 date_published: {{ date_published }}
-{%- endif %}
+{% endif -%}
 date_processed: {{ date_processed }}
-{%- if tags %}
+{% if tags -%}
 tags: {{ tags | tojson }}
-{%- endif %}
-
+{% endif -%}
 ---
 
 # {{ title }}
