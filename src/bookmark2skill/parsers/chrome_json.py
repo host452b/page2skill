@@ -42,3 +42,21 @@ def parse_chrome_json(path: str | pathlib.Path) -> list[dict[str, str]]:
         if isinstance(root_node, dict) and root_node.get("type") == "folder":
             results.extend(_walk(root_node, ""))
     return results
+
+
+def find_all_chrome_bookmarks(chrome_dir: str | pathlib.Path) -> list[dict[str, str]]:
+    """Scan all Chrome profiles under chrome_dir, merge and deduplicate bookmarks."""
+    chrome_path = pathlib.Path(chrome_dir)
+    if not chrome_path.is_dir():
+        return []
+    all_bookmarks: list[dict[str, str]] = []
+    seen_urls: set[str] = set()
+    for bookmarks_file in sorted(chrome_path.glob("*/Bookmarks")):
+        try:
+            for b in parse_chrome_json(bookmarks_file):
+                if b["url"] not in seen_urls:
+                    seen_urls.add(b["url"])
+                    all_bookmarks.append(b)
+        except (json.JSONDecodeError, OSError):
+            continue
+    return all_bookmarks

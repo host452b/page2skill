@@ -45,8 +45,8 @@ def test_cli_overrides_take_highest_priority(tmp_home, monkeypatch):
     assert cfg["vault_path"] == "/from/cli"
 
 
-def test_chrome_profile_auto_detect(tmp_home):
-    """Chrome profile path is auto-detected for the current OS."""
+def test_chrome_dir_auto_detect(tmp_home):
+    """Chrome base directory is auto-detected for the current OS."""
     cfg = load_config(home_dir=tmp_home)
-    assert cfg["chrome_profile"] is not None
-    assert "Chrome" in cfg["chrome_profile"] or "chrome" in cfg["chrome_profile"]
+    assert cfg["chrome_dir"] is not None
+    assert "Chrome" in cfg["chrome_dir"] or "chrome" in cfg["chrome_dir"]

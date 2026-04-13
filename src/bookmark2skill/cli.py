@@ -9,7 +9,7 @@ import click
 from bookmark2skill.config import load_config
 from bookmark2skill.fetcher import FetchError, fetch_url
 from bookmark2skill.manifest import Manifest
-from bookmark2skill.parsers.chrome_json import parse_chrome_json
+from bookmark2skill.parsers.chrome_json import find_all_chrome_bookmarks, parse_chrome_json
 from bookmark2skill.parsers.html_export import parse_html_export
 from bookmark2skill.renderers.obsidian import render_obsidian
 from bookmark2skill.renderers.skill import render_skill
@@ -62,13 +62,13 @@ def _detect_source_type(source: str) -> str:
 
 
 @cli.command()
-@click.option("--source", required=True, help="'chrome' to auto-detect local Chrome Bookmarks JSON, or path to .html/.json file")
+@click.option("--source", required=True, help="'chrome' to scan ALL Chrome profiles, or path to .html/.json file")
 @click.option("--manifest-path", default=None, help="Override manifest.json path [default: ~/.bookmark2skill/manifest.json]")
-@click.option("--chrome-profile", default=None, help="Override Chrome profile directory for --source=chrome")
+@click.option("--chrome-dir", default=None, help="Override Chrome base directory (containing all profiles)")
 @click.option("--only-new", is_flag=True, help="Output only URLs not yet in manifest (skip already-registered)")
 @click.option("--exclude-folder", multiple=True, help="Exclude bookmarks whose folder path contains this string (repeatable)")
 @click.option("--include-folder", multiple=True, help="Only include bookmarks whose folder path contains this string (repeatable)")
-def list(source: str, manifest_path: str | None, chrome_profile: str | None, only_new: bool, exclude_folder: tuple[str, ...], include_folder: tuple[str, ...]):
+def list(source: str, manifest_path: str | None, chrome_dir: str | None, only_new: bool, exclude_folder: tuple[str, ...], include_folder: tuple[str, ...]):
     """Parse bookmark source into JSON array. Registers new URLs as 'pending' in manifest.
 
     \b
@@ -77,9 +77,9 @@ def list(source: str, manifest_path: str | None, chrome_profile: str | None, onl
     Idempotent: URLs already in manifest are skipped (not overwritten).
     \b
     Source types:
-      --source chrome         Auto-detect Chrome's local Bookmarks JSON file
+      --source chrome         Scan ALL Chrome profiles, merge and deduplicate bookmarks
       --source bookmarks.html Parse Netscape HTML bookmark export (any browser)
-      --source Bookmarks      Directly specify a Chrome JSON file path
+      --source Bookmarks      Directly specify a single Chrome JSON file path
     \b
     Folder filtering (substring match, repeatable):
       --include-folder "Tech"              Only process bookmarks in folders containing "Tech"
@@ -93,17 +93,15 @@ def list(source: str, manifest_path: str | None, chrome_profile: str | None, onl
     """
     cfg = load_config(overrides={
         "manifest_path": manifest_path,
-        "chrome_profile": chrome_profile,
+        "chrome_dir": chrome_dir,
     })
     manifest = Manifest(cfg["manifest_path"])
 
     source_type = _detect_source_type(source)
     if source_type == "chrome":
-        chrome_dir = pathlib.Path(cfg["chrome_profile"])
-        bookmarks_file = chrome_dir / "Bookmarks"
-        if not bookmarks_file.is_file():
-            raise click.ClickException(f"Chrome bookmarks not found at {bookmarks_file}")
-        bookmarks = parse_chrome_json(bookmarks_file)
+        bookmarks = find_all_chrome_bookmarks(cfg["chrome_dir"])
+        if not bookmarks:
+            raise click.ClickException(f"No Chrome bookmarks found in {cfg['chrome_dir']}")
     elif source_type == "chrome_json":
         bookmarks = parse_chrome_json(source)
     else:

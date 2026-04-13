@@ -194,7 +194,7 @@ Run `b2k <command> --help` for detailed parameter descriptions with examples.
 
 | Source | Usage | Notes |
 |---|---|---|
-| Chrome local JSON | `--source chrome` | Auto-detects `~/Library/Application Support/Google/Chrome/Default/Bookmarks` |
+| Chrome (all profiles) | `--source chrome` | Scans ALL Chrome profiles, merges and deduplicates bookmarks |
 | HTML export | `--source bookmarks.html` | Netscape format, works with any browser |
 | Chrome JSON file | `--source /path/to/Bookmarks` | Direct path to Chrome's JSON file |
 

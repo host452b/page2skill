@@ -16,24 +16,24 @@ _DEFAULTS = {
     "skill_dir": None,
     "manifest_path": None,
     "taxonomy_path": None,
-    "chrome_profile": None,
+    "chrome_dir": None,
 }
 
 _ENV_PREFIX = "BOOKMARK2SKILL_"
 
 
-def _detect_chrome_profile() -> str:
-    """Return default Chrome profile path for current OS."""
+def _detect_chrome_dir() -> str:
+    """Return Chrome base directory (containing all profiles) for current OS."""
     system = platform.system()
     home = pathlib.Path.home()
     if system == "Darwin":
-        return str(home / "Library/Application Support/Google/Chrome/Default")
+        return str(home / "Library/Application Support/Google/Chrome")
     elif system == "Linux":
-        return str(home / ".config/google-chrome/Default")
+        return str(home / ".config/google-chrome")
     elif system == "Windows":
         local = os.environ.get("LOCALAPPDATA", "")
-        return str(pathlib.Path(local) / "Google/Chrome/User Data/Default")
-    return str(home / ".config/google-chrome/Default")
+        return str(pathlib.Path(local) / "Google/Chrome/User Data")
+    return str(home / ".config/google-chrome")
 
 
 def _read_toml(config_path: pathlib.Path) -> dict[str, Any]:
@@ -70,7 +70,7 @@ def load_config(
     cfg = dict(_DEFAULTS)
     cfg["manifest_path"] = str(b2s_dir / "manifest.json")
     cfg["taxonomy_path"] = str(b2s_dir / "taxonomy.toml")
-    cfg["chrome_profile"] = _detect_chrome_profile()
+    cfg["chrome_dir"] = _detect_chrome_dir()
 
     toml_values = _read_toml(b2s_dir / "config.toml")
     for key, value in toml_values.items():
