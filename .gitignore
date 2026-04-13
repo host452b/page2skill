@@ -5,10 +5,22 @@ __pycache__/
 dist/
 build/
 .venv/
+*.egg
 
 # Tool state (contains browsing data — do not commit)
 manifest.json
+manifest.json.bak
 
 # IDE / tool caches
 .pytest_cache/
 .claude/
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.*
