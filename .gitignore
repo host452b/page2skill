@@ -10,6 +10,8 @@ build/
 # Tool state (contains browsing data — do not commit)
 manifest.json
 manifest.json.bak
+b2k-vault/
+b2k-skills/
 
 # IDE / tool caches
 .pytest_cache/
