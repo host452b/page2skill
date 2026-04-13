@@ -177,3 +177,67 @@ class TestWriteSkillCommand:
             "--skill-dir", str(skill_dir),
         ])
         assert (skill_dir / "engineering" / "system-design").is_dir()
+
+
+class TestStatusCommand:
+    def test_status_empty(self, runner, tmp_home):
+        manifest_path = str(tmp_home / ".bookmark2skill" / "manifest.json")
+        result = runner.invoke(cli, ["status", "--manifest-path", manifest_path])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["total"] == 0
+
+    def test_status_with_bookmarks(self, runner, chrome_bookmarks_file, tmp_home):
+        manifest_path = str(tmp_home / ".bookmark2skill" / "manifest.json")
+        runner.invoke(cli, [
+            "list", "--source", str(chrome_bookmarks_file),
+            "--manifest-path", manifest_path,
+        ])
+        result = runner.invoke(cli, ["status", "--manifest-path", manifest_path])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["pending"] == 2
+        assert data["total"] == 2
+
+
+class TestMarkCommands:
+    def test_mark_done(self, runner, chrome_bookmarks_file, tmp_home):
+        manifest_path = str(tmp_home / ".bookmark2skill" / "manifest.json")
+        runner.invoke(cli, [
+            "list", "--source", str(chrome_bookmarks_file),
+            "--manifest-path", manifest_path,
+        ])
+        result = runner.invoke(cli, [
+            "mark-done", "https://example.com/article",
+            "--manifest-path", manifest_path,
+            "--obsidian-path", "/vault/article.md",
+            "--skill-path", "/skills/article.md",
+        ])
+        assert result.exit_code == 0
+        status = runner.invoke(cli, ["status", "--manifest-path", manifest_path])
+        data = json.loads(status.output)
+        assert data["done"] == 1
+
+    def test_mark_failed(self, runner, chrome_bookmarks_file, tmp_home):
+        manifest_path = str(tmp_home / ".bookmark2skill" / "manifest.json")
+        runner.invoke(cli, [
+            "list", "--source", str(chrome_bookmarks_file),
+            "--manifest-path", manifest_path,
+        ])
+        result = runner.invoke(cli, [
+            "mark-failed", "https://example.com/article",
+            "--manifest-path", manifest_path,
+            "--reason", "HTTP 404",
+        ])
+        assert result.exit_code == 0
+        status = runner.invoke(cli, ["status", "--manifest-path", manifest_path])
+        data = json.loads(status.output)
+        assert data["failed"] == 1
+
+    def test_mark_unknown_url_fails(self, runner, tmp_home):
+        manifest_path = str(tmp_home / ".bookmark2skill" / "manifest.json")
+        result = runner.invoke(cli, [
+            "mark-done", "https://example.com/unknown",
+            "--manifest-path", manifest_path,
+        ])
+        assert result.exit_code != 0

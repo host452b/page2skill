@@ -160,3 +160,44 @@ def write_skill(url: str, data_file: str | None, raw_file: str | None, category:
     out_file = out_dir / f"{slug}.md"
     out_file.write_text(content, encoding="utf-8")
     click.echo(json.dumps({"path": str(out_file)}, ensure_ascii=False))
+
+
+@cli.command()
+@click.option("--manifest-path", default=None, help="Override manifest file path")
+def status(manifest_path: str | None):
+    """Show bookmark processing status summary."""
+    cfg = load_config(overrides={"manifest_path": manifest_path})
+    manifest = Manifest(cfg["manifest_path"])
+    click.echo(json.dumps(manifest.summary(), ensure_ascii=False, indent=2))
+
+
+@cli.command("mark-done")
+@click.argument("url")
+@click.option("--manifest-path", default=None, help="Override manifest file path")
+@click.option("--obsidian-path", default="", help="Path to the written Obsidian note")
+@click.option("--skill-path", default="", help="Path to the written skill file")
+@click.option("--note", default="", help="Optional note")
+def mark_done(url: str, manifest_path: str | None, obsidian_path: str, skill_path: str, note: str):
+    """Mark a bookmark as successfully processed."""
+    cfg = load_config(overrides={"manifest_path": manifest_path})
+    manifest = Manifest(cfg["manifest_path"])
+    entry = manifest.get(url)
+    if entry is None:
+        raise click.ClickException(f"URL not found in manifest: {url}")
+    manifest.mark_done(url, obsidian_path=obsidian_path, skill_path=skill_path)
+    click.echo(json.dumps({"status": "done", "url": url}, ensure_ascii=False))
+
+
+@cli.command("mark-failed")
+@click.argument("url")
+@click.option("--manifest-path", default=None, help="Override manifest file path")
+@click.option("--reason", default="", help="Failure reason")
+def mark_failed(url: str, manifest_path: str | None, reason: str):
+    """Mark a bookmark as failed."""
+    cfg = load_config(overrides={"manifest_path": manifest_path})
+    manifest = Manifest(cfg["manifest_path"])
+    entry = manifest.get(url)
+    if entry is None:
+        raise click.ClickException(f"URL not found in manifest: {url}")
+    manifest.mark_failed(url, reason=reason)
+    click.echo(json.dumps({"status": "failed", "url": url}, ensure_ascii=False))
