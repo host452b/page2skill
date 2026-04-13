@@ -25,7 +25,7 @@
 
 ```bash
 # 1. 安装
-./build.sh develop
+pip install bookmark2skill
 
 # 2. 配置
 mkdir -p ~/.bookmark2skill
@@ -45,15 +45,21 @@ b2k fetch https://example.com/article
 ## 安装
 
 ```bash
-./build.sh develop    # 开发模式安装（含测试依赖）
-# 或
-pip install .         # 生产安装
+pip install bookmark2skill
 ```
 
 可选：Playwright 支持（JS 重页面）：
 
 ```bash
-pip install ".[browser]"
+pip install "bookmark2skill[browser]"
+```
+
+开发安装：
+
+```bash
+git clone https://github.com/host452b/bookmark2skill.git
+cd bookmark2skill
+./build.sh develop
 ```
 
 ### 构建命令

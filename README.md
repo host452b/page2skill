@@ -25,7 +25,7 @@
 
 ```bash
 # 1. Install
-./build.sh develop
+pip install bookmark2skill
 
 # 2. Configure
 mkdir -p ~/.bookmark2skill
@@ -45,15 +45,21 @@ b2k fetch https://example.com/article
 ## Install
 
 ```bash
-./build.sh develop    # editable install with dev deps
-# or
-pip install .         # production install
+pip install bookmark2skill
 ```
 
 Optional: Playwright for JS-heavy pages:
 
 ```bash
-pip install ".[browser]"
+pip install "bookmark2skill[browser]"
+```
+
+Development install:
+
+```bash
+git clone https://github.com/host452b/bookmark2skill.git
+cd bookmark2skill
+./build.sh develop
 ```
 
 ### Build Commands
