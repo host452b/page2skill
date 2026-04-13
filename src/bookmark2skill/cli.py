@@ -5,6 +5,7 @@ import pathlib
 import click
 
 from bookmark2skill.config import load_config
+from bookmark2skill.fetcher import FetchError, fetch_url
 from bookmark2skill.manifest import Manifest
 from bookmark2skill.parsers.chrome_json import parse_chrome_json
 from bookmark2skill.parsers.html_export import parse_html_export
@@ -70,3 +71,15 @@ def list(source: str, manifest_path: str | None, chrome_profile: str | None, onl
 
     output = new_bookmarks if only_new else bookmarks
     click.echo(json.dumps(output, ensure_ascii=False, indent=2))
+
+
+@cli.command()
+@click.argument("url")
+@click.option("--timeout", default=30.0, help="Request timeout in seconds")
+def fetch(url: str, timeout: float):
+    """Fetch a URL and output clean markdown to stdout."""
+    try:
+        markdown = fetch_url(url, timeout=timeout)
+    except FetchError as e:
+        raise click.ClickException(str(e))
+    click.echo(markdown)
