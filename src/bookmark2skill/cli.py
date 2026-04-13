@@ -1,6 +1,8 @@
 # src/bookmark2skill/cli.py
 import json
 import pathlib
+import re as _re
+import unicodedata
 
 import click
 
@@ -9,6 +11,8 @@ from bookmark2skill.fetcher import FetchError, fetch_url
 from bookmark2skill.manifest import Manifest
 from bookmark2skill.parsers.chrome_json import parse_chrome_json
 from bookmark2skill.parsers.html_export import parse_html_export
+from bookmark2skill.renderers.obsidian import render_obsidian
+from bookmark2skill.schema import ValidationError, validate
 
 
 @click.group()
@@ -83,3 +87,44 @@ def fetch(url: str, timeout: float):
     except FetchError as e:
         raise click.ClickException(str(e))
     click.echo(markdown)
+
+
+def _slugify(text: str, max_length: int = 80) -> str:
+    """Convert text to a filesystem-safe slug."""
+    text = unicodedata.normalize("NFKC", text)
+    text = _re.sub(r"[^\w\s\u4e00-\u9fff-]", "", text)
+    text = _re.sub(r"[\s_]+", "-", text).strip("-").lower()
+    return text[:max_length]
+
+
+@cli.command("write-obsidian")
+@click.option("--url", required=True, help="Source URL of the bookmark")
+@click.option("--data", "data_file", type=click.Path(exists=True), help="Structured JSON file")
+@click.option("--raw", "raw_file", type=click.Path(exists=True), help="Raw markdown file")
+@click.option("--vault-path", required=True, help="Obsidian vault directory")
+@click.option("--folder", default="", help="Subdirectory within bookmark2skill/")
+def write_obsidian(url: str, data_file: str | None, raw_file: str | None, vault_path: str, folder: str):
+    """Write an Obsidian note from structured JSON or raw markdown."""
+    if not data_file and not raw_file:
+        raise click.ClickException("Provide either --data or --raw")
+
+    vault = pathlib.Path(vault_path)
+    if raw_file:
+        content = pathlib.Path(raw_file).read_text(encoding="utf-8")
+        slug = _slugify(pathlib.Path(raw_file).stem)
+    else:
+        data = json.loads(pathlib.Path(data_file).read_text(encoding="utf-8"))
+        try:
+            validate(data)
+        except ValidationError as e:
+            raise click.ClickException(f"Invalid data: {e}")
+        content = render_obsidian(data)
+        slug = _slugify(data.get("title", "untitled"))
+
+    out_dir = vault / "bookmark2skill"
+    if folder:
+        out_dir = out_dir / folder
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_file = out_dir / f"{slug}.md"
+    out_file.write_text(content, encoding="utf-8")
+    click.echo(json.dumps({"path": str(out_file)}, ensure_ascii=False))

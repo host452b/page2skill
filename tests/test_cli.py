@@ -78,3 +78,53 @@ class TestFetchCommand:
         result = runner.invoke(cli, ["fetch", "https://example.com/missing"])
         assert result.exit_code != 0
         assert "404" in result.output
+
+
+class TestWriteObsidianCommand:
+    def test_write_from_structured_json(self, runner, tmp_path, sample_distilled_data):
+        vault = tmp_path / "vault"
+        vault.mkdir()
+        data_file = tmp_path / "data.json"
+        data_file.write_text(json.dumps(sample_distilled_data), encoding="utf-8")
+        result = runner.invoke(cli, [
+            "write-obsidian",
+            "--url", "https://example.com/article",
+            "--data", str(data_file),
+            "--vault-path", str(vault),
+        ])
+        assert result.exit_code == 0
+        md_files = list(vault.rglob("*.md"))
+        assert len(md_files) == 1
+        content = md_files[0].read_text()
+        assert "Simplicity is the ultimate sophistication" in content
+
+    def test_write_raw_mode(self, runner, tmp_path):
+        vault = tmp_path / "vault"
+        vault.mkdir()
+        raw_file = tmp_path / "raw.md"
+        raw_file.write_text("# My Raw Note\n\nContent here.", encoding="utf-8")
+        result = runner.invoke(cli, [
+            "write-obsidian",
+            "--url", "https://example.com/raw",
+            "--raw", str(raw_file),
+            "--vault-path", str(vault),
+        ])
+        assert result.exit_code == 0
+        md_files = list(vault.rglob("*.md"))
+        assert len(md_files) == 1
+        assert "My Raw Note" in md_files[0].read_text()
+
+    def test_write_creates_subdirectory_from_folder(self, runner, tmp_path, sample_distilled_data):
+        vault = tmp_path / "vault"
+        vault.mkdir()
+        data_file = tmp_path / "data.json"
+        data_file.write_text(json.dumps(sample_distilled_data), encoding="utf-8")
+        result = runner.invoke(cli, [
+            "write-obsidian",
+            "--url", "https://example.com/article",
+            "--data", str(data_file),
+            "--vault-path", str(vault),
+            "--folder", "tech/articles",
+        ])
+        assert result.exit_code == 0
+        assert (vault / "bookmark2skill" / "tech" / "articles").is_dir()
