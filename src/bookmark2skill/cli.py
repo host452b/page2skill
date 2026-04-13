@@ -136,7 +136,7 @@ def _safe_subpath(base: pathlib.Path, subpath: str) -> pathlib.Path:
 @click.option("--url", required=True, help="Source URL of the bookmark (stored in frontmatter)")
 @click.option("--data", "data_file", type=click.Path(exists=True), help="Path to structured JSON file (see agent-guide.md for schema)")
 @click.option("--raw", "raw_file", type=click.Path(exists=True), help="Path to raw Markdown file (bypass template, write as-is)")
-@click.option("--vault-path", required=True, help="Obsidian vault root directory")
+@click.option("--vault-path", default=".", help="Obsidian vault root directory [default: current directory]")
 @click.option("--folder", default="", help="Subdirectory under {vault-path}/bookmark2skill/ [default: root]")
 def write_obsidian(url: str, data_file: str | None, raw_file: str | None, vault_path: str, folder: str):
     """Render structured JSON into Obsidian note. Writes to {vault-path}/bookmark2skill/{folder}/{slug}.md.
@@ -173,7 +173,7 @@ def write_obsidian(url: str, data_file: str | None, raw_file: str | None, vault_
 @click.option("--data", "data_file", type=click.Path(exists=True), help="Path to structured JSON file (see agent-guide.md for schema)")
 @click.option("--raw", "raw_file", type=click.Path(exists=True), help="Path to raw Markdown file (bypass template, write as-is)")
 @click.option("--category", required=True, help="Category path for triage, e.g. 'engineering/system-design'. See taxonomy.toml")
-@click.option("--skill-dir", required=True, help="Base skill output directory root")
+@click.option("--skill-dir", default=".", help="Base skill output directory root [default: current directory]")
 def write_skill(url: str, data_file: str | None, raw_file: str | None, category: str, skill_dir: str):
     """Render structured JSON into Claude Code skill. Writes to {skill-dir}/{category}/{slug}.md.
 
@@ -255,7 +255,7 @@ def mark_failed(url: str, manifest_path: str | None, reason: str):
 
 @cli.command()
 @click.argument("query")
-@click.option("--skill-dir", required=True, help="Base skill output directory to search")
+@click.option("--skill-dir", default=".", help="Base skill output directory to search [default: current directory]")
 @click.option("--limit", "max_results", default=10, help="Max results to return [default: 10]")
 def search(query: str, skill_dir: str, max_results: int):
     """Search skill files by keyword. Matches against name, description, tags, key_claims, summary, and body.
