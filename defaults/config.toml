@@ -1,0 +1,12 @@
+# bookmark2skill configuration
+# Copy to ~/.bookmark2skill/config.toml and edit
+
+[paths]
+# Obsidian vault path — where human-readable notes are written
+# vault_path = "/path/to/your/obsidian/vault"
+
+# Skill output directory — where AI-agent-friendly skill files are written
+# skill_dir = "/path/to/your/skills"
+
+# Chrome profile directory (auto-detected if omitted)
+# chrome_profile = "~/Library/Application Support/Google/Chrome/Default"
