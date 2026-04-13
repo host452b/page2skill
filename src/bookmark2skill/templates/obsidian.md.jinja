@@ -1,0 +1,66 @@
+---
+url: {{ url }}
+{%- if original_title %}
+original_title: "{{ original_title }}"
+{%- endif %}
+{%- if author %}
+author: {{ author | tojson }}
+{%- endif %}
+{%- if date_published %}
+date_published: {{ date_published }}
+{%- endif %}
+date_processed: {{ date_processed }}
+{%- if tags %}
+tags: {{ tags | tojson }}
+{%- endif %}
+
+---
+
+# {{ title }}
+
+> **原文链接:** {{ url }}
+{% set d = layers.distillation if layers and layers.distillation else {} %}
+{% set m = layers.agent_metadata if layers and layers.agent_metadata else {} %}
+{% if d.logic_chain %}
+
+## 逻辑推导链
+{% for step in d.logic_chain %}
+- {{ step }}
+{% endfor %}
+{% endif %}
+{% if d.brilliant_quotes %}
+
+## 精彩表达
+{% for q in d.brilliant_quotes %}
+> "{{ q.text }}"
+> — *{{ q.why }}*
+{% endfor %}
+{% endif %}
+{% if d.narrative_craft %}
+
+## 叙事手法
+{% for n in d.narrative_craft %}
+- {{ n }}
+{% endfor %}
+{% endif %}
+{% if d.concrete_examples %}
+
+## 具体案例与数据
+{% for ex in d.concrete_examples %}
+- {{ ex }}
+{% endfor %}
+{% endif %}
+{% if d.counterpoints %}
+
+## 反对声音与局限性
+{% for cp in d.counterpoints %}
+- {{ cp }}
+{% endfor %}
+{% endif %}
+{% if d.overlooked_details %}
+
+## 容易忽略的细节
+{% for det in d.overlooked_details %}
+- {{ det }}
+{% endfor %}
+{% endif %}
