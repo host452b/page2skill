@@ -128,3 +128,52 @@ class TestWriteObsidianCommand:
         ])
         assert result.exit_code == 0
         assert (vault / "bookmark2skill" / "tech" / "articles").is_dir()
+
+
+class TestWriteSkillCommand:
+    def test_write_from_structured_json(self, runner, tmp_path, sample_distilled_data):
+        skill_dir = tmp_path / "skills"
+        skill_dir.mkdir()
+        data_file = tmp_path / "data.json"
+        data_file.write_text(json.dumps(sample_distilled_data), encoding="utf-8")
+        result = runner.invoke(cli, [
+            "write-skill",
+            "--url", "https://example.com/article",
+            "--data", str(data_file),
+            "--category", "engineering/system-design",
+            "--skill-dir", str(skill_dir),
+        ])
+        assert result.exit_code == 0
+        md_files = list(skill_dir.rglob("*.md"))
+        assert len(md_files) == 1
+        assert "engineering/system-design" in str(md_files[0])
+
+    def test_write_raw_mode(self, runner, tmp_path):
+        skill_dir = tmp_path / "skills"
+        skill_dir.mkdir()
+        raw_file = tmp_path / "raw.md"
+        raw_file.write_text("---\nname: test\n---\nContent.", encoding="utf-8")
+        result = runner.invoke(cli, [
+            "write-skill",
+            "--url", "https://example.com/raw",
+            "--raw", str(raw_file),
+            "--category", "thinking/mental-models",
+            "--skill-dir", str(skill_dir),
+        ])
+        assert result.exit_code == 0
+        md_files = list(skill_dir.rglob("*.md"))
+        assert len(md_files) == 1
+
+    def test_category_creates_nested_dirs(self, runner, tmp_path, sample_distilled_data):
+        skill_dir = tmp_path / "skills"
+        skill_dir.mkdir()
+        data_file = tmp_path / "data.json"
+        data_file.write_text(json.dumps(sample_distilled_data), encoding="utf-8")
+        result = runner.invoke(cli, [
+            "write-skill",
+            "--url", "https://example.com/article",
+            "--data", str(data_file),
+            "--category", "engineering/system-design",
+            "--skill-dir", str(skill_dir),
+        ])
+        assert (skill_dir / "engineering" / "system-design").is_dir()

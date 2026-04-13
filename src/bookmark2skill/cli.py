@@ -12,6 +12,7 @@ from bookmark2skill.manifest import Manifest
 from bookmark2skill.parsers.chrome_json import parse_chrome_json
 from bookmark2skill.parsers.html_export import parse_html_export
 from bookmark2skill.renderers.obsidian import render_obsidian
+from bookmark2skill.renderers.skill import render_skill
 from bookmark2skill.schema import ValidationError, validate
 
 
@@ -124,6 +125,37 @@ def write_obsidian(url: str, data_file: str | None, raw_file: str | None, vault_
     out_dir = vault / "bookmark2skill"
     if folder:
         out_dir = out_dir / folder
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_file = out_dir / f"{slug}.md"
+    out_file.write_text(content, encoding="utf-8")
+    click.echo(json.dumps({"path": str(out_file)}, ensure_ascii=False))
+
+
+@cli.command("write-skill")
+@click.option("--url", required=True, help="Source URL of the bookmark")
+@click.option("--data", "data_file", type=click.Path(exists=True), help="Structured JSON file")
+@click.option("--raw", "raw_file", type=click.Path(exists=True), help="Raw markdown file")
+@click.option("--category", required=True, help="Category path (e.g., engineering/system-design)")
+@click.option("--skill-dir", required=True, help="Base skill output directory")
+def write_skill(url: str, data_file: str | None, raw_file: str | None, category: str, skill_dir: str):
+    """Write a Claude Code skill file from structured JSON or raw markdown."""
+    if not data_file and not raw_file:
+        raise click.ClickException("Provide either --data or --raw")
+
+    base = pathlib.Path(skill_dir)
+    if raw_file:
+        content = pathlib.Path(raw_file).read_text(encoding="utf-8")
+        slug = _slugify(pathlib.Path(raw_file).stem)
+    else:
+        data = json.loads(pathlib.Path(data_file).read_text(encoding="utf-8"))
+        try:
+            validate(data)
+        except ValidationError as e:
+            raise click.ClickException(f"Invalid data: {e}")
+        content = render_skill(data)
+        slug = _slugify(data.get("title", "untitled"))
+
+    out_dir = base / category
     out_dir.mkdir(parents=True, exist_ok=True)
     out_file = out_dir / f"{slug}.md"
     out_file.write_text(content, encoding="utf-8")
