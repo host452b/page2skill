@@ -1,0 +1,58 @@
+{
+  "url": "https://example.com/article",
+  "title": "Simplicity is the ultimate sophistication",
+  "date_processed": "2026-04-13T12:00:00Z",
+  "original_title": "On System Design",
+  "author": ["Jane Doe"],
+  "language": "en",
+  "category": "engineering/system-design",
+  "layers": {
+    "distillation": {
+      "logic_chain": [
+        "Complex systems fail in complex ways",
+        "Therefore, reduce moving parts",
+        "Simplicity is a feature, not a compromise"
+      ],
+      "brilliant_quotes": [
+        {
+          "text": "The best code is no code at all.",
+          "why": "Concise expression of YAGNI principle"
+        }
+      ],
+      "narrative_craft": ["Uses concrete war stories to build credibility"],
+      "concrete_examples": [
+        "Netflix's circuit breaker pattern reduced cascading failures by 70%"
+      ],
+      "counterpoints": [
+        "Author acknowledges simplicity can be premature in exploratory phases"
+      ],
+      "overlooked_details": ["Mentions Hystrix library v1.5 configuration"]
+    },
+    "agent_metadata": {
+      "tags": ["system-design", "simplicity", "reliability"],
+      "content_type": "technical-article",
+      "key_claims": [
+        "Simplicity in system design directly correlates with reliability",
+        "Most system failures come from unnecessary complexity"
+      ],
+      "taste_signals": {
+        "aesthetic": ["minimalism", "clarity"],
+        "intellectual": ["first-principles", "empiricism"],
+        "values": ["anti-complexity", "pragmatism"]
+      },
+      "reuse_contexts": [
+        {
+          "situation": "Making architecture decisions",
+          "how": "Use as argument for simpler approach"
+        }
+      ],
+      "related_concepts": ["YAGNI", "KISS", "circuit-breaker"],
+      "quality_score": {
+        "depth": 4,
+        "originality": 3,
+        "practicality": 5,
+        "writing": 4
+      }
+    }
+  }
+}
