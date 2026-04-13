@@ -1,0 +1,23 @@
+[engineering]
+description = "Software engineering practices, architecture, implementation"
+subcategories = ["system-design", "frontend", "backend", "devops", "testing", "performance", "security"]
+
+[thinking]
+description = "Mental models, reasoning frameworks, decision-making"
+subcategories = ["mental-models", "decision-making", "problem-solving", "first-principles", "cognitive-biases"]
+
+[design]
+description = "Visual design, UX, interaction patterns"
+subcategories = ["ui-ux", "visual", "interaction", "typography", "accessibility"]
+
+[writing]
+description = "Writing craft, communication, rhetoric"
+subcategories = ["technical", "narrative", "persuasion", "clarity", "editing"]
+
+[product]
+description = "Product thinking, strategy, user research"
+subcategories = ["strategy", "user-research", "growth", "metrics", "prioritization"]
+
+[culture]
+description = "Team culture, leadership, organization"
+subcategories = ["leadership", "collaboration", "hiring", "remote-work"]

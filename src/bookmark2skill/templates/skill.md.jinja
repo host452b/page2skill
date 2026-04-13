@@ -1,0 +1,84 @@
+---
+name: "{{ title }}"
+description: "{{ description }}"
+url: {{ url }}
+{%- if category %}
+category: {{ category }}
+{%- endif %}
+{%- if content_type %}
+content_type: {{ content_type }}
+{%- endif %}
+{%- if tags %}
+tags: {{ tags | tojson }}
+{%- endif %}
+{%- if key_claims %}
+key_claims:
+{%- for claim in key_claims %}
+  - "{{ claim }}"
+{%- endfor %}
+{%- endif %}
+{%- if taste_signals %}
+taste_signals:
+{%- if taste_signals.aesthetic %}
+  aesthetic: {{ taste_signals.aesthetic | tojson }}
+{%- endif %}
+{%- if taste_signals.intellectual %}
+  intellectual: {{ taste_signals.intellectual | tojson }}
+{%- endif %}
+{%- if taste_signals['values'] %}
+  values: {{ taste_signals['values'] | tojson }}
+{%- endif %}
+{%- endif %}
+{%- if reuse_contexts %}
+reuse_contexts:
+{%- for ctx in reuse_contexts %}
+  - situation: "{{ ctx.situation }}"
+    how: "{{ ctx.how }}"
+{%- endfor %}
+{%- endif %}
+{%- if quality_score %}
+quality_score:
+{%- if quality_score.depth is not none %}
+  depth: {{ quality_score.depth }}
+{%- endif %}
+{%- if quality_score.originality is not none %}
+  originality: {{ quality_score.originality }}
+{%- endif %}
+{%- if quality_score.practicality is not none %}
+  practicality: {{ quality_score.practicality }}
+{%- endif %}
+{%- if quality_score.writing is not none %}
+  writing: {{ quality_score.writing }}
+{%- endif %}
+{%- endif %}
+---
+{% set d = distillation %}
+{% set m = agent_metadata %}
+{% if d and d.logic_chain %}
+
+## Key Insights
+{% for step in d.logic_chain %}
+- {{ step }}
+{% endfor %}
+{% endif %}
+{% if d and d.brilliant_quotes %}
+
+## Memorable Quotes
+{% for q in d.brilliant_quotes %}
+> "{{ q.text }}"
+{% endfor %}
+{% endif %}
+{% if d and d.concrete_examples %}
+
+## Concrete Examples
+{% for ex in d.concrete_examples %}
+- {{ ex }}
+{% endfor %}
+{% endif %}
+{% if m and m.reuse_contexts %}
+
+## When To Reference
+{% for ctx in m.reuse_contexts %}
+- **{{ ctx.situation }}** → {{ ctx.how }}
+{% endfor %}
+{% endif %}
