@@ -433,3 +433,166 @@ def search(query: str, skill_dir: str, max_results: int):
     results.sort(key=lambda r: r["score"], reverse=True)
     results = results[:max_results]
     click.echo(json.dumps(results, ensure_ascii=False, indent=2))
+
+
+_SKIP_URL_PATTERNS = [
+    # Enterprise collaboration platforms
+    "atlassian.net", "confluence.", "jira.", "gitlab.", "github.com/enterprise",
+    "service-now.com", "sharepoint.com", "workday.com", "slack.com/archives",
+    # E-commerce / purchase / registration pages
+    ".aliyun.com", "taobao.com", "jd.com", "tmall.com",
+    "amazon.com/dp", "amazon.com/gp",
+    # Auth-gated content
+    "coursera.org/programs",
+]
+
+_SKIP_TITLE_KEYWORDS = [
+    # Portal / dashboard / login (not knowledge content)
+    "登录", "控制台", "dashboard", "login", "admin", "console",
+    "sign in", "sign up", "注册",
+    # Account / personal management
+    "我的订单", "my request", "account settings", "账户",
+    # Download / install pages
+    "安装指南", "install guide",
+]
+
+_SKIP_FOLDER_KEYWORDS = [
+    # Portals / online tools (no knowledge value for distillation)
+    "在线工具", "ONLINE_TOOLS", "门户", "Portal",
+    # HR / onboarding / offboarding
+    "离职", "入职", "WELFARE", "ESPP",
+    # Shopping / finance
+    "购物", "STOCK",
+    # Work infra (generic keywords)
+    "在家办公",
+]
+
+_WHITELIST_FOLDER_KEYWORDS = [
+    # Learning & knowledge
+    "正在学", "学习", "STACK", "C++", "python", "RUST", "CUDA", "pytorch",
+    # AI & creative
+    "CHAT AI", "AI 模型", "SKILLS", "GODOT",
+    # Interesting finds
+    "有意思", "有趣", "令人惊叹",
+    # Resources & references
+    "免费", "思考", "长期学习", "CODE_REPO", "论文", "文献",
+    # Projects
+    "MISC", "探针", "个人项目",
+]
+
+
+@cli.command()
+@click.option("--source", required=True, help="'chrome' to scan all profiles, or path to bookmark file")
+@click.option("--vault-path", default=".", help="Obsidian vault root [default: current directory]")
+@click.option("--skill-dir", default=".", help="Skill output root [default: current directory]")
+@click.option("--include-folder", multiple=True, help="Only include bookmarks in these folders (repeatable)")
+@click.option("--exclude-folder", multiple=True, help="Exclude bookmarks in these folders (repeatable)")
+@click.option("--chrome-dir", default=None, help="Override Chrome base directory")
+def report(source: str, vault_path: str, skill_dir: str, include_folder: tuple[str, ...],
+           exclude_folder: tuple[str, ...], chrome_dir: str | None):
+    """Show processing status: done / skipped / pending for each bookmark.
+
+    \b
+    Cross-references bookmarks against generated files in vault and skill dirs.
+    Skips company-internal URLs (Confluence, Jira, GitLab, etc.) automatically.
+    Output: human-readable table to stdout (not JSON, not saved to any file).
+    \b
+    Examples:
+      b2k report --source chrome --include-folder "Learning"
+      b2k report --source chrome --vault-path ./b2k-vault --skill-dir ./b2k-skills
+    """
+    import os as _os
+
+    cfg = load_config(overrides={"chrome_dir": chrome_dir})
+
+    # Parse bookmarks
+    source_type = _detect_source_type(source)
+    if source_type == "chrome":
+        from bookmark2skill.parsers.chrome_json import find_all_chrome_bookmarks
+        bookmarks = find_all_chrome_bookmarks(cfg["chrome_dir"])
+    elif source_type == "chrome_json":
+        bookmarks = parse_chrome_json(source)
+    else:
+        bookmarks = parse_html_export(source)
+
+    if include_folder:
+        bookmarks = [b for b in bookmarks if any(inc in b["folder"] for inc in include_folder)]
+    if exclude_folder:
+        bookmarks = [b for b in bookmarks if not any(exc in b["folder"] for exc in exclude_folder)]
+
+    # Index generated files by URL
+    vault_base = pathlib.Path(vault_path) / "bookmark2skill"
+    skill_base = pathlib.Path(skill_dir)
+    vault_urls: dict[str, str] = {}
+    skill_urls: dict[str, tuple[str, str]] = {}
+
+    if vault_base.is_dir():
+        for f in vault_base.rglob("*.md"):
+            try:
+                for line in f.read_text(encoding="utf-8").split("\n")[:10]:
+                    if line.startswith("url:"):
+                        url = line.split("url:", 1)[1].strip().strip('"')
+                        vault_urls[url] = f.name
+                        break
+            except (OSError, UnicodeDecodeError):
+                continue
+
+    if skill_base.is_dir():
+        for f in skill_base.rglob("*.md"):
+            try:
+                for line in f.read_text(encoding="utf-8").split("\n")[:10]:
+                    if line.startswith("url:"):
+                        url = line.split("url:", 1)[1].strip().strip('"')
+                        cat = str(f.parent.relative_to(skill_base))
+                        skill_urls[url] = (cat, f.name)
+                        break
+            except (OSError, UnicodeDecodeError):
+                continue
+
+    # Classify
+    done, skipped, pending = [], [], []
+    for b in bookmarks:
+        url, title = b["url"], b["title"][:60]
+        folder = b.get("folder", "")
+        title_lower = b.get("title", "").lower()
+        is_skip_url = any(p in url.lower() for p in _SKIP_URL_PATTERNS)
+        is_skip_folder = any(kw in folder for kw in _SKIP_FOLDER_KEYWORDS)
+        is_skip_title = any(kw in title_lower for kw in _SKIP_TITLE_KEYWORDS)
+        is_whitelisted = any(kw in folder for kw in _WHITELIST_FOLDER_KEYWORDS)
+
+        if url in vault_urls and url in skill_urls:
+            cat = skill_urls[url][0]
+            done.append({"title": title, "category": cat})
+        elif is_skip_url:
+            skipped.append({"title": title, "reason": "URL 匹配跳过规则"})
+        elif is_skip_folder:
+            skipped.append({"title": title, "reason": "文件夹匹配跳过规则"})
+        elif is_skip_title:
+            skipped.append({"title": title, "reason": "标题匹配跳过规则"})
+        elif not is_whitelisted:
+            skipped.append({"title": title, "reason": "不在白名单文件夹中"})
+        else:
+            pending.append({"title": title, "url": url})
+
+    # Print report
+    click.echo(f"\n{'═' * 70}")
+    click.echo(f"b2k Processing Report")
+    click.echo(f"{'═' * 70}")
+
+    if done:
+        click.echo(f"\n✅ 蒸馏成功 ({len(done)})")
+        for i, d in enumerate(done):
+            click.echo(f"  {i+1}. [{d['category']}] {d['title']}")
+
+    if skipped:
+        click.echo(f"\n⏭️  跳过 ({len(skipped)})")
+        for i, s in enumerate(skipped):
+            click.echo(f"  {i+1}. ({s['reason']}) {s['title']}")
+
+    if pending:
+        click.echo(f"\n⏳ 待处理 ({len(pending)})")
+        for i, p in enumerate(pending):
+            click.echo(f"  {i+1}. {p['title']}")
+
+    click.echo(f"\n{'─' * 70}")
+    click.echo(f"成功: {len(done)} | 跳过: {len(skipped)} | 待处理: {len(pending)} | 总计: {len(bookmarks)}")
