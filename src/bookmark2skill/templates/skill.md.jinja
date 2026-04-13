@@ -1,12 +1,12 @@
 ---
-name: "{{ title }}"
-description: "{{ description }}"
-url: {{ url }}
+name: {{ title | tojson }}
+description: {{ description | tojson }}
+url: {{ url | tojson }}
 {%- if category %}
-category: {{ category }}
+category: {{ category | tojson }}
 {%- endif %}
 {%- if content_type %}
-content_type: {{ content_type }}
+content_type: {{ content_type | tojson }}
 {%- endif %}
 {%- if tags %}
 tags: {{ tags | tojson }}
@@ -14,7 +14,7 @@ tags: {{ tags | tojson }}
 {%- if key_claims %}
 key_claims:
 {%- for claim in key_claims %}
-  - "{{ claim }}"
+  - {{ claim | tojson }}
 {%- endfor %}
 {%- endif %}
 {%- if taste_signals %}
@@ -32,8 +32,8 @@ taste_signals:
 {%- if reuse_contexts %}
 reuse_contexts:
 {%- for ctx in reuse_contexts %}
-  - situation: "{{ ctx.situation }}"
-    how: "{{ ctx.how }}"
+  - situation: {{ ctx.situation | tojson }}
+    how: {{ ctx.how | tojson }}
 {%- endfor %}
 {%- endif %}
 {%- if quality_score %}

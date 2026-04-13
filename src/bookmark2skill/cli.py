@@ -120,7 +120,16 @@ def _slugify(text: str, max_length: int = 80) -> str:
     text = unicodedata.normalize("NFKC", text)
     text = _re.sub(r"[^\w\s\u4e00-\u9fff-]", "", text)
     text = _re.sub(r"[\s_]+", "-", text).strip("-").lower()
-    return text[:max_length]
+    result = text[:max_length]
+    return result if result else "untitled"
+
+
+def _safe_subpath(base: pathlib.Path, subpath: str) -> pathlib.Path:
+    """Resolve subpath under base, reject path traversal attempts."""
+    resolved = (base / subpath).resolve()
+    if not resolved.is_relative_to(base.resolve()):
+        raise click.ClickException(f"Path escapes base directory: {subpath}")
+    return resolved
 
 
 @cli.command("write-obsidian")
@@ -151,9 +160,8 @@ def write_obsidian(url: str, data_file: str | None, raw_file: str | None, vault_
         content = render_obsidian(data)
         slug = _slugify(data.get("title", "untitled"))
 
-    out_dir = vault / "bookmark2skill"
-    if folder:
-        out_dir = out_dir / folder
+    base_dir = vault / "bookmark2skill"
+    out_dir = _safe_subpath(base_dir, folder) if folder else base_dir
     out_dir.mkdir(parents=True, exist_ok=True)
     out_file = out_dir / f"{slug}.md"
     out_file.write_text(content, encoding="utf-8")
@@ -189,7 +197,7 @@ def write_skill(url: str, data_file: str | None, raw_file: str | None, category:
         content = render_skill(data)
         slug = _slugify(data.get("title", "untitled"))
 
-    out_dir = base / category
+    out_dir = _safe_subpath(base, category)
     out_dir.mkdir(parents=True, exist_ok=True)
     out_file = out_dir / f"{slug}.md"
     out_file.write_text(content, encoding="utf-8")

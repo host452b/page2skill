@@ -1,7 +1,7 @@
 ---
-url: {{ url }}
+url: {{ url | tojson }}
 {%- if original_title %}
-original_title: "{{ original_title }}"
+original_title: {{ original_title | tojson }}
 {%- endif %}
 {%- if author %}
 author: {{ author | tojson }}

@@ -5,3 +5,10 @@ __pycache__/
 dist/
 build/
 .venv/
+
+# Tool state (contains browsing data — do not commit)
+manifest.json
+
+# IDE / tool caches
+.pytest_cache/
+.claude/

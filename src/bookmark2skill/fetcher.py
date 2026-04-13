@@ -26,8 +26,18 @@ _HEADERS = {
 
 _JINA_PREFIX = "https://r.jina.ai/"
 
+_ALLOWED_SCHEMES = {"http", "https"}
+
 # Content shorter than this (chars) triggers Jina fallback
 _MIN_CONTENT_LENGTH = 200
+
+
+def _validate_url(url: str) -> None:
+    """Reject non-http/https URLs to prevent SSRF and scheme abuse."""
+    from urllib.parse import urlparse
+    parsed = urlparse(url)
+    if parsed.scheme.lower() not in _ALLOWED_SCHEMES:
+        raise FetchError(f"Unsupported URL scheme '{parsed.scheme}' — only http/https allowed: {url}")
 
 
 def _html_to_markdown(html: str) -> str:
@@ -98,6 +108,8 @@ def fetch_url(url: str, *, timeout: float = 30.0, renderer: str = "auto") -> str
       'jina'       — Jina Reader API only
       'playwright' — Local Playwright browser only
     """
+    _validate_url(url)
+
     if renderer == "direct":
         try:
             return _fetch_direct(url, timeout=timeout)
