@@ -12,6 +12,7 @@ manifest.json
 manifest.json.bak
 b2k-vault/
 b2k-skills/
+b2k-raw/
 
 # IDE / tool caches
 .pytest_cache/

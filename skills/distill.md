@@ -14,12 +14,25 @@ When orchestrating the `b2k` (bookmark2skill) pipeline:
 b2k fetch <url> → (YOU distill here) → b2k write-obsidian + b2k write-skill
 ```
 
+## Two-Phase Pipeline
+
+```
+Phase 1 (batch): b2k fetch <url> --save-raw ./b2k-raw    ← 批量抓取，保存原始内容
+Phase 2 (AI):    读 b2k-raw/*.md → 蒸馏 → b2k write       ← 逐篇 AI 蒸馏
+```
+
+Phase 1 可以自动化批量跑（保底防链接腐烂）。Phase 2 必须由 AI 逐篇完成。
+
 ## Process
 
-### Step 1: Fetch the content
+### Step 1: Fetch the content (Phase 1)
 
 ```bash
-b2k fetch <url> > /tmp/b2k-raw.md
+# 单个 URL — 保存原始内容到 b2k-raw/
+b2k fetch <url> --save-raw ./b2k-raw
+
+# 或直接读取已保存的原始内容
+cat ./b2k-raw/<slug>.md
 ```
 
 Read the full output. Do NOT skip or skim.

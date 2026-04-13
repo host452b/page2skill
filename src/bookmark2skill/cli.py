@@ -130,7 +130,9 @@ def list(source: str, manifest_path: str | None, chrome_dir: str | None, only_ne
 @click.option("--timeout", default=30.0, help="HTTP request timeout in seconds [default: 30.0]")
 @click.option("--renderer", default="auto", type=click.Choice(["auto", "direct", "jina", "playwright"]),
               help="Fetch strategy: 'auto' tries direct→jina→playwright; or force one [default: auto]")
-def fetch(url: str, timeout: float, renderer: str):
+@click.option("--save-raw", default=None, type=click.Path(),
+              help="Save raw Markdown to this directory (creates {dir}/{slug}.md)")
+def fetch(url: str, timeout: float, renderer: str, save_raw: str | None):
     """Fetch a URL or local file and output clean Markdown to stdout.
 
     \b
@@ -152,12 +154,21 @@ def fetch(url: str, timeout: float, renderer: str):
       b2k fetch https://example.com/spa --renderer jina
       b2k fetch ~/Downloads/report.pdf
       b2k fetch ~/Desktop/slides.pptx > /tmp/slides.md
+      b2k fetch https://example.com/article --save-raw ./b2k-raw
     """
     try:
         markdown = fetch_url(url, timeout=timeout, renderer=renderer)
     except FetchError as e:
         raise click.ClickException(str(e))
-    click.echo(markdown)
+    if save_raw:
+        raw_dir = pathlib.Path(save_raw)
+        raw_dir.mkdir(parents=True, exist_ok=True)
+        slug = _slugify(url.split("/")[-1] or url.split("/")[-2] or "page", max_length=60)
+        raw_file = raw_dir / f"{slug}.md"
+        raw_file.write_text(markdown, encoding="utf-8")
+        click.echo(json.dumps({"raw_path": str(raw_file), "chars": len(markdown)}, ensure_ascii=False))
+    else:
+        click.echo(markdown)
 
 
 def _slugify(text: str, max_length: int = 80) -> str:
