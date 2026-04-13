@@ -48,10 +48,10 @@ b2k fetch https://example.com/article
 pip install bookmark2skill
 ```
 
-可选：Playwright 支持（JS 重页面）：
+Playwright 已默认包含（用于 JS 重页面）。安装后执行一次：
 
 ```bash
-pip install "bookmark2skill[browser]"
+playwright install chromium
 ```
 
 开发安装：

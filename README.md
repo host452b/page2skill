@@ -48,10 +48,10 @@ b2k fetch https://example.com/article
 pip install bookmark2skill
 ```
 
-Optional: Playwright for JS-heavy pages:
+Playwright is included by default for JS-heavy pages. After install, run once:
 
 ```bash
-pip install "bookmark2skill[browser]"
+playwright install chromium
 ```
 
 Development install:
