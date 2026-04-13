@@ -78,6 +78,7 @@ def sample_distilled_data():
     return {
         "url": "https://example.com/article",
         "title": "Simplicity is the ultimate sophistication",
+        "summary": "Argues that system reliability correlates directly with simplicity. Uses Netflix circuit breaker as evidence. Relevant when making architecture decisions that trade complexity for features.",
         "date_processed": "2026-04-13T12:00:00Z",
         "original_title": "On System Design",
         "author": ["Jane Doe"],
@@ -141,6 +142,7 @@ def sample_minimal_data():
     return {
         "url": "https://example.com/minimal",
         "title": "Minimal Article",
+        "summary": "A minimal test article.",
         "date_processed": "2026-04-13T12:00:00Z"
     }
 

@@ -8,7 +8,7 @@ class ValidationError(Exception):
     pass
 
 
-_REQUIRED_FIELDS = ("url", "title", "date_processed")
+_REQUIRED_FIELDS = ("url", "title", "date_processed", "summary")
 
 
 def _validate_quality_score(score: dict[str, Any]) -> None:

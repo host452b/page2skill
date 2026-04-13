@@ -35,6 +35,7 @@ def render_skill(data: dict[str, Any]) -> str:
 
     context = {
         "title": data.get("title", ""),
+        "summary": data.get("summary", ""),
         "description": description,
         "url": data.get("url", ""),
         "category": data.get("category"),

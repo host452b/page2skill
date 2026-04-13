@@ -18,6 +18,10 @@ tags: {{ tags | tojson }}
 # {{ title }}
 
 > **原文链接:** {{ url }}
+
+## 摘要
+
+{{ summary }}
 {% set d = layers.distillation if layers and layers.distillation else {} %}
 {% set m = layers.agent_metadata if layers and layers.agent_metadata else {} %}
 {% if d.logic_chain %}

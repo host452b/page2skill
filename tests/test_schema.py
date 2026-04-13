@@ -7,6 +7,7 @@ def test_valid_full_data(sample_distilled_data):
     result = validate(sample_distilled_data)
     assert result["url"] == "https://example.com/article"
     assert result["title"] == "Simplicity is the ultimate sophistication"
+    assert "system reliability" in result["summary"]
 
 
 def test_valid_minimal_data(sample_minimal_data):
@@ -19,19 +20,25 @@ def test_valid_minimal_data(sample_minimal_data):
 def test_missing_url_raises():
     """Missing required field 'url' raises ValidationError."""
     with pytest.raises(ValidationError, match="url"):
-        validate({"title": "Test", "date_processed": "2026-04-13T12:00:00Z"})
+        validate({"title": "Test", "summary": "S", "date_processed": "2026-04-13T12:00:00Z"})
 
 
 def test_missing_title_raises():
     """Missing required field 'title' raises ValidationError."""
     with pytest.raises(ValidationError, match="title"):
-        validate({"url": "https://x.com", "date_processed": "2026-04-13T12:00:00Z"})
+        validate({"url": "https://x.com", "summary": "S", "date_processed": "2026-04-13T12:00:00Z"})
 
 
 def test_missing_date_processed_raises():
     """Missing required field 'date_processed' raises ValidationError."""
     with pytest.raises(ValidationError, match="date_processed"):
-        validate({"url": "https://x.com", "title": "Test"})
+        validate({"url": "https://x.com", "title": "Test", "summary": "S"})
+
+
+def test_missing_summary_raises():
+    """Missing required field 'summary' raises ValidationError."""
+    with pytest.raises(ValidationError, match="summary"):
+        validate({"url": "https://x.com", "title": "Test", "date_processed": "2026-04-13T12:00:00Z"})
 
 
 def test_empty_optional_fields_are_ok():
@@ -39,6 +46,7 @@ def test_empty_optional_fields_are_ok():
     data = {
         "url": "https://example.com/test",
         "title": "Test",
+        "summary": "Test summary.",
         "date_processed": "2026-04-13T12:00:00Z",
         "author": [],
         "layers": {
@@ -67,6 +75,7 @@ def test_quality_score_range():
     data = {
         "url": "https://example.com/test",
         "title": "Test",
+        "summary": "Test summary.",
         "date_processed": "2026-04-13T12:00:00Z",
         "layers": {
             "agent_metadata": {

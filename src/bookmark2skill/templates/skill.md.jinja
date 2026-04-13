@@ -45,6 +45,10 @@ quality_score:
 {% endif %}
 {% endif -%}
 ---
+
+## Summary
+
+{{ summary }}
 {% set d = distillation %}
 {% set m = agent_metadata %}
 {% if d and d.logic_chain %}

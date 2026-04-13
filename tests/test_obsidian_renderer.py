@@ -30,7 +30,8 @@ def test_render_skips_empty_sections(sample_minimal_data):
     result = render_obsidian(sample_minimal_data)
     lines = result.split("\n")
     section_headers = [l for l in lines if l.startswith("## ")]
-    assert len(section_headers) == 0
+    # Only "摘要" should remain (required field), all optional sections skipped
+    assert section_headers == ["## 摘要"]
 
 
 def test_render_quotes_include_why(sample_distilled_data):

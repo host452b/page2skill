@@ -36,12 +36,13 @@ bookmark2skill mark-failed <url> --reason "HTTP 404"
 ## Structured JSON Format
 
 Your distilled output should be a JSON file with this structure.
-Only `url`, `title`, and `date_processed` are required. All other fields are optional.
+Required fields: `url`, `title`, `date_processed`, `summary`. All other fields are optional.
 
 ```json
 {
   "url": "https://example.com/article",
   "title": "Core claim of the article (not the original title)",
+  "summary": "2-4 sentence summary capturing the core argument, key evidence, and why it matters. Written for a human scanning their knowledge base.",
   "date_processed": "2026-04-13T12:00:00Z",
   "original_title": "The Original Article Title",
   "author": ["Author Name"],
@@ -78,7 +79,18 @@ Only `url`, `title`, and `date_processed` are required. All other fields are opt
 
 ## Distillation Guidelines
 
-**Do NOT summarize.** Deconstruct and preserve:
+### Summary (required)
+
+Every distillation MUST include a `summary` field. This is a 2-4 sentence paragraph that captures:
+- The core argument or purpose of the content
+- The key evidence or method
+- Why it matters or when it's useful
+
+Write the summary for a human scanning their knowledge base — concise, specific, no filler. This is NOT a substitute for the six-dimension deconstruction below; it's a quick-access entry point.
+
+### Six-Dimension Deconstruction
+
+**Do NOT just summarize.** Deconstruct and preserve:
 
 1. **Logic chains:** Trace the author's reasoning step by step
 2. **Brilliant quotes:** Keep the original words + annotate WHY they're brilliant
