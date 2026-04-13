@@ -105,13 +105,13 @@ skill_dir = "/path/to/your/skills"
 AI agent orchestrates the following pipeline. `b2k` is a shorthand alias for `bookmark2skill`:
 
 ```
-┌─────────────┐    ┌─────────────┐    ┌──────────────┐    ┌──────────────┐    ┌────────────┐
-│  b2k list   │ →  │  b2k fetch  │ →  │  AI agent    │ →  │  b2k write-  │ →  │ b2k mark-  │
-│  --source   │    │  <url>      │    │  distills    │    │  obsidian +  │    │ done <url> │
-│  chrome     │    │             │    │  content     │    │  write-skill │    │            │
-└─────────────┘    └─────────────┘    └──────────────┘    └──────────────┘    └────────────┘
-   parse &            scrape &           produces            render to           update
-   register           clean page         structured JSON     local files         manifest
+┌─────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌────────────┐
+│  b2k list   │ →  │  b2k fetch   │ →  │  AI agent    │ →  │  b2k write-  │ →  │ b2k mark-  │
+│  --source   │    │  <url/file>  │    │  distills    │    │  obsidian +  │    │ done <url> │
+│  chrome     │    │              │    │  content     │    │  write-skill │    │            │
+└─────────────┘    └──────────────┘    └──────────────┘    └──────────────┘    └────────────┘
+   parse &            URL: tiered       produces            render to           update
+   register           File: markitdown  structured JSON     local files         manifest
 ```
 
 ### Step by step
@@ -124,8 +124,9 @@ b2k list --source chrome
 b2k status
 # → {"pending": 15, "done": 42, "failed": 3, "total": 60}
 
-# 3. Fetch a single page (auto-detects best method)
+# 3. Fetch a page or local file (auto-detects)
 b2k fetch https://example.com/article > /tmp/raw.md
+b2k fetch ~/Downloads/report.pdf > /tmp/raw.md
 
 # 4. AI agent reads raw.md, produces structured JSON
 #    (see docs/agent-guide.md for schema and distillation guidelines)
@@ -186,13 +187,14 @@ b2k search "simplicity" --limit 5
 | Command | Purpose | Input | Output |
 |---|---|---|---|
 | `list` | Parse bookmark source, register new URLs | `--source chrome` or `.html` file | JSON array → stdout |
-| `fetch` | Fetch and clean a single page | URL | Markdown → stdout |
+| `fetch` | Fetch URL or convert local file (PDF/Word/PPT/Excel) | URL or file path | Markdown → stdout |
 | `write-obsidian` | Render structured JSON into Obsidian note | `--data` JSON or `--raw` MD | Writes file, path → stdout |
 | `write-skill` | Render structured JSON into skill file | `--data` JSON + `--category` | Writes file, path → stdout |
 | `status` | Query manifest processing status | — | JSON counts → stdout |
 | `mark-done` | Set URL status to 'done' in manifest | URL + output paths | Updates manifest |
 | `mark-failed` | Set URL status to 'failed' in manifest | URL + reason | Updates manifest |
 | `search` | Search skill files by keyword | query string | JSON results → stdout |
+| `report` | Show processing status (done/skipped/pending) | `--source chrome` | Human-readable table → stdout |
 
 Run `b2k <command> --help` for detailed parameter descriptions with examples.
 
@@ -203,6 +205,18 @@ Run `b2k <command> --help` for detailed parameter descriptions with examples.
 | Chrome (all profiles) | `--source chrome` | Scans ALL Chrome profiles, merges and deduplicates bookmarks |
 | HTML export | `--source bookmarks.html` | Netscape format, works with any browser |
 | Chrome JSON file | `--source /path/to/Bookmarks` | Direct path to Chrome's JSON file |
+
+### Local File Conversion
+
+`b2k fetch` also converts local files to Markdown via [markitdown](https://github.com/microsoft/markitdown):
+
+```bash
+b2k fetch ~/Downloads/report.pdf        # PDF
+b2k fetch ~/Desktop/slides.pptx         # PowerPoint
+b2k fetch ~/Documents/paper.docx        # Word
+b2k fetch data.xlsx                      # Excel
+b2k fetch recording.mp3                  # Audio (transcription)
+```
 
 ## Output Formats
 
@@ -356,6 +370,7 @@ See [`docs/agent-guide.md`](docs/agent-guide.md) for:
 | JS rendering | Playwright (optional) | Local headless Chrome (Tier 3) |
 | Templates | Jinja2 | Obsidian + skill output rendering |
 | Config | tomli | TOML config parsing |
+| File conversion | markitdown | PDF, Word, PPT, Excel → Markdown |
 | Language | Python 3.10+ | — |
 
 ## License

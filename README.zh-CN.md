@@ -105,13 +105,13 @@ skill_dir = "/你的/skill/输出/路径"
 AI agent 编排以下流程（人类也可以手动执行）。`b2k` 是 `bookmark2skill` 的缩写别名：
 
 ```
-┌─────────────┐    ┌─────────────┐    ┌──────────────┐    ┌──────────────┐    ┌────────────┐
-│  b2k list   │ →  │  b2k fetch  │ →  │  AI agent    │ →  │  b2k write-  │ →  │ b2k mark-  │
-│  --source   │    │  <url>      │    │  蒸馏内容     │    │  obsidian +  │    │ done <url> │
-│  chrome     │    │             │    │              │    │  write-skill │    │            │
-└─────────────┘    └─────────────┘    └──────────────┘    └──────────────┘    └────────────┘
-   解析 &              抓取 &            生成结构化           渲染到本地           更新
-   注册到 manifest      清洗页面           JSON                文件              manifest
+┌─────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌────────────┐
+│  b2k list   │ →  │  b2k fetch   │ →  │  AI agent    │ →  │  b2k write-  │ →  │ b2k mark-  │
+│  --source   │    │  <url/file>  │    │  蒸馏内容     │    │  obsidian +  │    │ done <url> │
+│  chrome     │    │              │    │              │    │  write-skill │    │            │
+└─────────────┘    └──────────────┘    └──────────────┘    └──────────────┘    └────────────┘
+   解析 &              URL: 三层抓取     生成结构化           渲染到本地           更新
+   注册到 manifest      文件: markitdown  JSON                文件              manifest
 ```
 
 ### 逐步说明
@@ -124,8 +124,9 @@ b2k list --source chrome
 b2k status
 # → {"pending": 15, "done": 42, "failed": 3, "total": 60}
 
-# 3. 抓取单个页面（自动选择最佳方式）
+# 3. 抓取页面或转换本地文件（自动检测）
 b2k fetch https://example.com/article > /tmp/raw.md
+b2k fetch ~/Downloads/report.pdf > /tmp/raw.md
 
 # 4. AI agent 阅读 raw.md，生成结构化 JSON
 #    （完整 schema 见 docs/agent-guide.md）
@@ -186,13 +187,14 @@ b2k search "simplicity" --limit 5
 | 命令 | 作用 | 输入 | 输出 |
 |---|---|---|---|
 | `list` | 解析书签源，注册新 URL | `--source chrome` 或 `.html` 文件 | JSON 数组 → stdout |
-| `fetch` | 抓取并清洗单个页面 | URL | Markdown → stdout |
+| `fetch` | 抓取 URL 或转换本地文件 (PDF/Word/PPT/Excel) | URL 或文件路径 | Markdown → stdout |
 | `write-obsidian` | 渲染结构化 JSON 为 Obsidian 笔记 | `--data` JSON 或 `--raw` MD | 写文件，路径 → stdout |
 | `write-skill` | 渲染结构化 JSON 为 skill 文件 | `--data` JSON + `--category` | 写文件，路径 → stdout |
 | `status` | 查询 manifest 处理状态 | — | JSON 计数 → stdout |
 | `mark-done` | 标记 URL 为已完成 | URL + 输出路径 | 更新 manifest |
 | `mark-failed` | 标记 URL 为失败 | URL + 原因 | 更新 manifest |
 | `search` | 搜索 skill 文件 | 关键词 | JSON 结果 → stdout |
+| `report` | 显示处理状态（成功/跳过/待处理） | `--source chrome` | 可读表格 → stdout |
 
 执行 `b2k <command> --help` 查看详细参数说明和使用示例。
 
@@ -203,6 +205,18 @@ b2k search "simplicity" --limit 5
 | Chrome（所有 Profile） | `--source chrome` | 自动扫描所有 Chrome Profile，合并去重 |
 | HTML 导出文件 | `--source bookmarks.html` | Netscape 格式，支持所有浏览器导出 |
 | Chrome JSON 文件 | `--source /path/to/Bookmarks` | 直接指定单个 Chrome JSON 文件 |
+
+### 本地文件转换
+
+`b2k fetch` 也支持本地文件，通过 [markitdown](https://github.com/microsoft/markitdown) 转换：
+
+```bash
+b2k fetch ~/Downloads/report.pdf        # PDF
+b2k fetch ~/Desktop/slides.pptx         # PowerPoint
+b2k fetch ~/Documents/paper.docx        # Word
+b2k fetch data.xlsx                      # Excel
+b2k fetch recording.mp3                  # 音频（语音转文字）
+```
 
 ## 输出格式
 
@@ -356,6 +370,7 @@ AI agent 蒸馏后产出此 JSON。必填字段：`url`、`title`、`summary`、
 | JS 渲染 | Playwright（可选） | 本地无头 Chrome（第 3 层） |
 | 模板 | Jinja2 | Obsidian + skill 输出渲染 |
 | 配置 | tomli | TOML 配置解析 |
+| 文件转换 | markitdown | PDF、Word、PPT、Excel → Markdown |
 | 语言 | Python 3.10+ | — |
 
 ## 许可证
