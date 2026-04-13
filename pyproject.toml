@@ -9,6 +9,19 @@ description = "Convert Chrome bookmarks into Obsidian notes and Claude Code skil
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
+keywords = ["bookmarks", "chrome", "obsidian", "knowledge-base", "ai-agent", "skill", "cli"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Text Processing :: Markup :: Markdown",
+    "Topic :: Utilities",
+]
 dependencies = [
     "click>=8.0",
     "httpx>=0.27",
@@ -16,6 +29,11 @@ dependencies = [
     "jinja2>=3.1",
     "tomli>=2.0;python_version<'3.11'",
 ]
+
+[project.urls]
+Homepage = "https://github.com/host452b/bookmark2skill"
+Repository = "https://github.com/host452b/bookmark2skill"
+Issues = "https://github.com/host452b/bookmark2skill/issues"
 
 [project.optional-dependencies]
 browser = ["playwright>=1.40"]
