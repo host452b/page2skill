@@ -19,7 +19,12 @@ from bookmark2skill.schema import ValidationError, validate
 @click.group()
 @click.version_option(package_name="bookmark2skill")
 def cli():
-    """Convert Chrome bookmarks into Obsidian notes and Claude Code skills."""
+    """Chrome bookmarks → Obsidian notes + Claude Code skills.
+
+    AI agent downstream tool. Does NOT call any LLM API.
+    Agent orchestrates: list → fetch → (distill) → write → mark.
+    See docs/agent-guide.md for full workflow.
+    """
     pass
 
 
@@ -41,12 +46,16 @@ def _detect_source_type(source: str) -> str:
 
 
 @cli.command()
-@click.option("--source", required=True, help="'chrome' for auto-detect, or path to bookmark file")
-@click.option("--manifest-path", default=None, help="Override manifest file path")
-@click.option("--chrome-profile", default=None, help="Override Chrome profile directory")
-@click.option("--only-new", is_flag=True, help="Only output bookmarks not yet in manifest")
+@click.option("--source", required=True, help="'chrome' to auto-detect local Chrome Bookmarks JSON, or path to .html/.json file")
+@click.option("--manifest-path", default=None, help="Override manifest.json path [default: ~/.bookmark2skill/manifest.json]")
+@click.option("--chrome-profile", default=None, help="Override Chrome profile directory for --source=chrome")
+@click.option("--only-new", is_flag=True, help="Output only URLs not yet in manifest (skip already-registered)")
 def list(source: str, manifest_path: str | None, chrome_profile: str | None, only_new: bool):
-    """Parse bookmarks and output as JSON. Registers new bookmarks in manifest."""
+    """Parse bookmark source into JSON array. Registers new URLs as 'pending' in manifest.
+
+    Output: JSON array of {url, title, folder, date_added} to stdout.
+    Side effect: new URLs are added to manifest with status 'pending'.
+    """
     cfg = load_config(overrides={
         "manifest_path": manifest_path,
         "chrome_profile": chrome_profile,
@@ -80,9 +89,13 @@ def list(source: str, manifest_path: str | None, chrome_profile: str | None, onl
 
 @cli.command()
 @click.argument("url")
-@click.option("--timeout", default=30.0, help="Request timeout in seconds")
+@click.option("--timeout", default=30.0, help="HTTP request timeout in seconds [default: 30.0]")
 def fetch(url: str, timeout: float):
-    """Fetch a URL and output clean markdown to stdout."""
+    """Fetch a single URL via httpx+readability, output clean Markdown to stdout.
+
+    Strips navigation, ads, footers. Keeps article body only.
+    Exit code 1 on HTTP error or connection failure (error message to stderr).
+    """
     try:
         markdown = fetch_url(url, timeout=timeout)
     except FetchError as e:
@@ -99,13 +112,17 @@ def _slugify(text: str, max_length: int = 80) -> str:
 
 
 @cli.command("write-obsidian")
-@click.option("--url", required=True, help="Source URL of the bookmark")
-@click.option("--data", "data_file", type=click.Path(exists=True), help="Structured JSON file")
-@click.option("--raw", "raw_file", type=click.Path(exists=True), help="Raw markdown file")
-@click.option("--vault-path", required=True, help="Obsidian vault directory")
-@click.option("--folder", default="", help="Subdirectory within bookmark2skill/")
+@click.option("--url", required=True, help="Source URL of the bookmark (stored in frontmatter)")
+@click.option("--data", "data_file", type=click.Path(exists=True), help="Path to structured JSON file (see agent-guide.md for schema)")
+@click.option("--raw", "raw_file", type=click.Path(exists=True), help="Path to raw Markdown file (bypass template, write as-is)")
+@click.option("--vault-path", required=True, help="Obsidian vault root directory")
+@click.option("--folder", default="", help="Subdirectory under {vault-path}/bookmark2skill/ [default: root]")
 def write_obsidian(url: str, data_file: str | None, raw_file: str | None, vault_path: str, folder: str):
-    """Write an Obsidian note from structured JSON or raw markdown."""
+    """Render structured JSON into Obsidian note. Writes to {vault-path}/bookmark2skill/{folder}/{slug}.md.
+
+    Provide --data for template rendering or --raw for direct write (mutually exclusive).
+    Output: JSON {"path": "<written file path>"} to stdout.
+    """
     if not data_file and not raw_file:
         raise click.ClickException("Provide either --data or --raw")
 
@@ -132,13 +149,18 @@ def write_obsidian(url: str, data_file: str | None, raw_file: str | None, vault_
 
 
 @cli.command("write-skill")
-@click.option("--url", required=True, help="Source URL of the bookmark")
-@click.option("--data", "data_file", type=click.Path(exists=True), help="Structured JSON file")
-@click.option("--raw", "raw_file", type=click.Path(exists=True), help="Raw markdown file")
-@click.option("--category", required=True, help="Category path (e.g., engineering/system-design)")
-@click.option("--skill-dir", required=True, help="Base skill output directory")
+@click.option("--url", required=True, help="Source URL of the bookmark (stored in frontmatter)")
+@click.option("--data", "data_file", type=click.Path(exists=True), help="Path to structured JSON file (see agent-guide.md for schema)")
+@click.option("--raw", "raw_file", type=click.Path(exists=True), help="Path to raw Markdown file (bypass template, write as-is)")
+@click.option("--category", required=True, help="Category path for triage, e.g. 'engineering/system-design'. See taxonomy.toml")
+@click.option("--skill-dir", required=True, help="Base skill output directory root")
 def write_skill(url: str, data_file: str | None, raw_file: str | None, category: str, skill_dir: str):
-    """Write a Claude Code skill file from structured JSON or raw markdown."""
+    """Render structured JSON into Claude Code skill. Writes to {skill-dir}/{category}/{slug}.md.
+
+    Provide --data for template rendering or --raw for direct write (mutually exclusive).
+    Category determines subdirectory. Consult ~/.bookmark2skill/taxonomy.toml for categories.
+    Output: JSON {"path": "<written file path>"} to stdout.
+    """
     if not data_file and not raw_file:
         raise click.ClickException("Provide either --data or --raw")
 
@@ -163,9 +185,9 @@ def write_skill(url: str, data_file: str | None, raw_file: str | None, category:
 
 
 @cli.command()
-@click.option("--manifest-path", default=None, help="Override manifest file path")
+@click.option("--manifest-path", default=None, help="Override manifest.json path [default: ~/.bookmark2skill/manifest.json]")
 def status(manifest_path: str | None):
-    """Show bookmark processing status summary."""
+    """Output manifest summary as JSON: {pending, done, failed, total} counts."""
     cfg = load_config(overrides={"manifest_path": manifest_path})
     manifest = Manifest(cfg["manifest_path"])
     click.echo(json.dumps(manifest.summary(), ensure_ascii=False, indent=2))
@@ -173,12 +195,16 @@ def status(manifest_path: str | None):
 
 @cli.command("mark-done")
 @click.argument("url")
-@click.option("--manifest-path", default=None, help="Override manifest file path")
-@click.option("--obsidian-path", default="", help="Path to the written Obsidian note")
-@click.option("--skill-path", default="", help="Path to the written skill file")
-@click.option("--note", default="", help="Optional note")
+@click.option("--manifest-path", default=None, help="Override manifest.json path [default: ~/.bookmark2skill/manifest.json]")
+@click.option("--obsidian-path", default="", help="File path of the written Obsidian note (recorded in manifest)")
+@click.option("--skill-path", default="", help="File path of the written skill file (recorded in manifest)")
+@click.option("--note", default="", help="Optional free-text note stored in manifest entry")
 def mark_done(url: str, manifest_path: str | None, obsidian_path: str, skill_path: str, note: str):
-    """Mark a bookmark as successfully processed."""
+    """Set URL status to 'done' in manifest. Record output file paths.
+
+    URL must already exist in manifest (registered via 'list' command).
+    Exit code 1 if URL not found.
+    """
     cfg = load_config(overrides={"manifest_path": manifest_path})
     manifest = Manifest(cfg["manifest_path"])
     entry = manifest.get(url)
@@ -190,10 +216,14 @@ def mark_done(url: str, manifest_path: str | None, obsidian_path: str, skill_pat
 
 @cli.command("mark-failed")
 @click.argument("url")
-@click.option("--manifest-path", default=None, help="Override manifest file path")
-@click.option("--reason", default="", help="Failure reason")
+@click.option("--manifest-path", default=None, help="Override manifest.json path [default: ~/.bookmark2skill/manifest.json]")
+@click.option("--reason", default="", help="Failure reason string stored in manifest (e.g. 'HTTP 404', 'timeout')")
 def mark_failed(url: str, manifest_path: str | None, reason: str):
-    """Mark a bookmark as failed."""
+    """Set URL status to 'failed' in manifest. Record failure reason.
+
+    URL must already exist in manifest (registered via 'list' command).
+    Exit code 1 if URL not found.
+    """
     cfg = load_config(overrides={"manifest_path": manifest_path})
     manifest = Manifest(cfg["manifest_path"])
     entry = manifest.get(url)
